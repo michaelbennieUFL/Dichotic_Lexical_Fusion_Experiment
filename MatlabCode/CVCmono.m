@@ -88,27 +88,7 @@ if exist(pathSave)~=7   %if file directory doesn't exist, create new dir
 end
 feval('cd',pathSave);
 
-if atten>0  %6/8/2022 for Babyface option
-    %Connect to PA5
-    PA5=actxcontrol('PA5.x',[5 5 26 26]);
-    invoke(PA5,'ConnectPA5','USB',1);
-    PA5_2=actxcontrol('PA5.x',[10 5 36 26]);
-    invoke(PA5_2,'ConnectPA5','USB',2);
-    
-    %Set attens
-    PA5.SetAtten(atten);
-    errorl=PA5.GetError();
-    if length(errorl)~=0
-        PA5.Display(errorl, 0);
-    end
-    PA5_2.SetAtten(atten);
-    errorl=PA5_2.GetError();
-    if length(errorl)~=0
-        PA5_2.Display(errorl, 0);
-    end
-    scalefactor=1;
-    soundsystem='Juli + rack Headphones';
-else
+
     if earnum<3
         scalefactor=10^(-31/20);
     elseif earnum==3
@@ -119,7 +99,7 @@ else
     elseif atten==-2
         soundsystem='Babyface + MixCube';
     end
-end
+
 
 rand('state',sum(100*clock)); %for random seed resetting
 pickaNum=mod(randperm(ceil(maxN)),maxN)+1;
@@ -269,7 +249,7 @@ for nn=1:howmany
 	else
 		pause(0.5);
 	end
-	
+
 	%answer=resp(0,,feedback); % if the response box then put 0
 	%[mod(pickaNum(nn),9)+1 answer] %debug to make sure correct output
 	
