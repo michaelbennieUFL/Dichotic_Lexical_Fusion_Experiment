@@ -11,7 +11,7 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
 % -------------------------------------------------------------------------
 %                 *****  USER-EDITABLE CONSTANTS  *****
 fsPlayback     = 44100;
-bits           = 32;
+bits           = 24;
 padSamples     = 2000;
 playScale      = 10^(-31/20);        % Babyface Pro
 maxReplays     = 2;                  % per trial
@@ -108,7 +108,7 @@ for trial = 1:howmany
     a=audioplayer(stereo,fsPlayback,bits); playblocking(a); pause(.3);
 
     %% ---- collect up-to-3 answers  -------------------------------------
-    buttonv6(9).name='Pick 1–3 buttons (▶ to replay)'; bcontrol(h,1,buttonv6,9,'w',20);
+    buttonv6(9).name="Choose 1-3 sounds you heard ('Repeat' to replay)"; bcontrol(h,1,buttonv6,9,'w',20);
     vowelChosen=false(1,3); replayCnt=0; answers=[]; shp=0; t0=tic;
     while true
         waitButton; idx=shp;
@@ -232,4 +232,3 @@ end
 function out = pickStr(def,val,bv)
     if val==-1, out='NA'; else, out=bv(val).name; end
 end
-
