@@ -20,6 +20,32 @@ vowLabels      = {'IH','EH','AE'};   % order on GUI bottom row
 vowelCodeMap   = containers.Map({'IH','EH','AE'},{1,2,3});
 singleLetter   = containers.Map({'IH','EH','AE'},{'i','e','a'});
 f0Label = containers.Map({'low_f0','high_f0'}, {1,2});
+
+
+
+
+%% =====  BUILD PLAYLIST  (mono + dichotic)  =============================
+stimRoot = '/SoundFiles/CVC2025/Dichotic_Lexical_Fusion_Experiment/actual_stimuli';
+
+initials = {'D','G','L'};
+finals   = {'D','F','TH','JH','G'};
+vMap     = containers.Map({'a','e','i'},{'AE','EH','IH'});
+f0Names  = {'high_f0','low_f0'};
+
+monoPairs = round(howmany*0.2);          % e.g. 20 % identical L/R
+pairList  = generate_CVC_dichotic_pairs( ...
+                stimRoot, subjID, initials, finals, vMap, f0Names, ...
+                monoPairs, {'AE','IH'});       % returns Nx2 cell array
+
+if howmany > size(pairList,1)
+    error('Requested %d trials but only %d pairs exist. Reduce *howmany*.',...
+          howmany, size(pairList,1));
+end
+pairList = pairList(1:howmany,:);        % crop / random-order preserved
+
+
+
+
 % -----------------------------------------------------
 if nargin<4, catchflag=0; end
 if nargin<3, audflag  =0; end
@@ -55,9 +81,15 @@ statsCat = struct('lowlow',[],'highhigh',[],'alt',[]); % per-F0 condition
 tally    = struct;                       % per (C1,C2)
 
 for trial = 1:howmany
-    %% ---- pick / load stimulus pair (legacy lists kept) -----------------
-    [wavL,wavR,C1,C2,V1,V2,f01,f02] = legacy_pick_stims(trial,catchflag); %#ok<*ASGLU>
-    f01id = f0Label(f01); f02id = f0Label(f02);
+    L = pairList{trial,1};    % {C1,C2,V,f0,path}
+    R = pairList{trial,2};
+
+    C1 = L{1};  C2 = L{2};
+    V1 = L{3};  V2 = R{3};
+    f01= L{4};  f02= R{4};
+
+    wavL = audioread(L{5});
+    wavR = audioread(R{5});
 
     %% ---- build GUI buttons --------------------------------------------
     for i=1:3
