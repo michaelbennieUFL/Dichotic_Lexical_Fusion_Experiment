@@ -166,36 +166,36 @@ for nn=1:howmany
 	set(cr,'String',num2str(nn));
 	%matCom(7) %hide cursor
 	soundName=[soundPath whichVow(stimset(pickaNum(nn),1),:) '_' whichF0(stimset(pickaNum(nn),2),:) '.wav'];
-	y=wavread(soundName);
-    y=[zeros(2000,1); y; zeros(2000,1)];
+    [mono_audio_stream, fs_wav] = audioread(soundName);  % Load audio
+    padded_mono_audio_stream=[zeros(2000,1); mono_audio_stream; zeros(2000,1)]; % Add padding
     if earnum==1    %left ear
         if audflag==1
-            [target rms_y db_y] = ampstim(y, fs, aud(1,:));
+            [target rms_y db_y] = ampstim(padded_mono_audio_stream, fs, aud(1,:));
             target=target/(10^(28/20));
             if max(abs(target))>1 
                 disp('WARNING!!!  Wave file will exceed allowable values of +-1.  Please use audiogram with lower values!  ');
             end
             
         elseif audflag==0
-            target=y;
+            target=padded_mono_audio_stream;
         end
         z=[target zeros(length(target),1)];
     elseif earnum==2    %right ear
         if audflag==1
-            [target rms_y db_y] = ampstim(y, fs, aud(2,:));
+            [target rms_y db_y] = ampstim(padded_mono_audio_stream, fs, aud(2,:));
             target=target/(10^(28/20));
             if max(abs(target))>1 
                 disp('WARNING!!!  Wave file will exceed allowable values of +-1.  Please use audiogram with lower values!  ');
             end
             
         elseif audflag==0
-            target=y;
+            target=padded_mono_audio_stream;
         end
         z=[zeros(length(target),1) target];
     elseif earnum==3    %both ears
         if audflag==1
-            [targetL rms_y db_y] = ampstim(y, fs, aud(1,:));
-            [targetR rms_y db_y] = ampstim(y, fs, aud(2,:));
+            [targetL rms_y db_y] = ampstim(padded_mono_audio_stream, fs, aud(1,:));
+            [targetR rms_y db_y] = ampstim(padded_mono_audio_stream, fs, aud(2,:));
             targetL=targetL/(10^(28/20));
             targetR=targetR/(10^(28/20));
             if max(abs(targetL))>1 | max(abs(targetR))>1
@@ -203,8 +203,8 @@ for nn=1:howmany
             end
             
         elseif audflag==0
-            targetL=y;
-            targetR=y;
+            targetL=padded_mono_audio_stream;
+            targetR=padded_mono_audio_stream;
         end
         z=[targetL targetR];        
     end        
