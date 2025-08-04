@@ -147,8 +147,17 @@ for trial = 1:howmany
 
     %% ---- bookkeeping ---------------------------------------------------
     nAns = numel(answers);
-    answers(end+1:3) = -1;                 %#ok<AGROW>
-    ansVowel = arrayfun(@(x) buttonToVowel(x),answers); % 1-3 or -1
+    answers(end+1:3) = -1;                 % pad with –1 placeholders
+    ansVowel = -1 * ones(1,3);             % pre-allocate output
+
+    for k = 1:3
+        if answers(k) ~= -1                % real button pressed
+            ansVowel(k) = buttonToVowel( answers(k) );
+            % buttonToVowel is the lookup [1 2 3 1 2 3 1 2 3]
+            %                    idx 1-9  →  vowel code 1-3
+        end                                % else it stays –1
+    end
+
     ansCons  = answers<=3 & answers~=-1;   % top-row → heard consonant
     ansCons(end+1:3)=0;
     oneType  = all(ansVowel(ansVowel~=-1)==ansVowel(find(ansVowel~=-1,1)));
