@@ -109,18 +109,38 @@ for trial = 1:howmany
 
     %% ---- collect up-to-3 answers  -------------------------------------
     buttonv6(9).name="Choose 1-3 sounds you heard ('Repeat' to replay)"; bcontrol(h,1,buttonv6,9,'w',20);
-    vowelChosen=false(1,3); replayCnt=0; answers=[]; shp=0; t0=tic;
+    vowelChosen = false(1,6); replayCnt=0; answers=[]; shp=0; t0=tic;
     while true
         waitButton; idx=shp;
         if idx==7      % ▶ replay
-            if replayCnt<maxReplays, playblocking(a); replayCnt=replayCnt+1;
-            else, flash(h,9,'Replay limit reached'); end
-        elseif idx<=6  % a vowel button
-            if ~vowelChosen(idx), vowelChosen(idx)=true; answers(end+1)=idx; bcontrol(h,1,buttonv6,idx,'blue',30); %#ok<AGROW>
-            else, vowelChosen(idx)=false; answers(answers==idx)=[]; bcontrol(h,1,buttonv6,idx,'red',30);
+            if replayCnt < maxReplays
+                playblocking(a); replayCnt = replayCnt + 1;
+            else                            % -------- inline flash -------------
+                buttonv6(9).name = 'Replay limit reached';
+                bcontrol(h,1,buttonv6,9,'w',20); pause(.6);
+            end
+        elseif idx <= 6               % a vowel (top or bottom row)
+            if ~vowelChosen(idx)
+                if nnz(vowelChosen) < 3            % still room for another choice
+                    vowelChosen(idx) = true;
+                    answers(end+1)  = idx;
+                    bcontrol(h,1,buttonv6,idx,'blue',30);
+                else                               % -------- inline flash --------
+                    buttonv6(9).name = 'Max 3 choices';
+                    bcontrol(h,1,buttonv6,9,'w',20); pause(.6);
+                end
+            else                                    % toggle off
+                vowelChosen(idx) = false;
+                answers(answers == idx) = [];
+                bcontrol(h,1,buttonv6,idx,'red',30);
             end
         elseif idx==8  % ✔ confirm
-            if ~isempty(answers) && numel(answers)<=3, break; else, flash(h,9,'Pick 1-3'); end
+                if ~isempty(answers) && numel(answers) <= 3
+                    break;
+                else                            % -------- inline flash -------------
+                    buttonv6(9).name = 'Pick 1-3';
+                    bcontrol(h,1,buttonv6,9,'w',20); pause(.6);
+                end
         end
     end
     RT=toc(t0); rtTot=rtTot+RT;
@@ -142,9 +162,16 @@ for trial = 1:howmany
 
     % category by F0 condition
     cat = pickCategory(f01id,f02id);
-    statsCat.(cat).n = getfield(statsCat,cat,'n',0)+1;                %#ok<GFLD>
-    statsCat.(cat).ok1  = getfield(statsCat,cat,'ok1',0)+both(any(ismember(selSet,stimSet)));
-    statsCat.(cat).ok2  = getfield(statsCat,cat,'ok2',0)+bothOK;
+    % ---------- update per-F0-category counters -----------------------------
+    if isempty(statsCat.(cat))
+        statsCat.(cat) = struct('n',0,'ok1',0,'ok2',0);
+    end
+
+    statsCat.(cat).n   = statsCat.(cat).n   + 1;
+    hitOne             = ~isempty(intersect(selSet,stimSet));   % ≥1 correct
+    statsCat.(cat).ok1 = statsCat.(cat).ok1 + hitOne;
+    statsCat.(cat).ok2 = statsCat.(cat).ok2 + bothOK;
+
 
     % per consonant pair tally
     keyCC = sprintf('%s_%s',C1,C2);
@@ -216,8 +243,14 @@ function stereo = pad_and_scale(yL,yR,audflag,scale,pad)
 end
 
 function flash(h,idx,msg)
-    buttonv6(idx).name=msg; bcontrol(h,1,buttonv6,idx,'w',20); pause(.6);
+    global buttonv6
+
+    buttonv6(idx).name = msg; % update label
+    bcontrol(h,1,buttonv6,idx,'w',20);  % works for every button (1–9)
+    pause(0.6);
 end
+
+
 
 function cat = pickCategory(f01,f02)
     if  f01==1 && f02==1,        cat='lowlow';
