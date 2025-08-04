@@ -1,29 +1,3 @@
-function stereo = pad_and_scale(yL,yR,audflag,scale,pad)
-    if audflag, % <insert HL-correction if you still need it>
-    end
-    stereo = [zeros(pad,2); [yL yR]; zeros(pad,2)] * scale;
-end
-
-function flash(h,idx,msg)
-    buttonv6(idx).name=msg; bcontrol(h,1,buttonv6,idx,'w',20); pause(.6);
-end
-
-function cat = pickCategory(f01,f02)
-    if  f01==1 && f02==1,        cat='lowlow';
-    elseif f01==2 && f02==2,     cat='highhigh';
-    else,                        cat='alt'; end
-end
-
-function out = pick(def,val,arr)
-    if val==-1, out=def; else, out=arr{val}; end
-end
-
-function out = pickStr(def,val,bv)
-    if val==-1, out='NA'; else, out=bv(val).name; end
-end
-
-
-
 function percentScore = CVC(subjID, howmany, audflag, catchflag)
 % CVC  Dichotic / diotic concurrent-vowel identification (up to 3 answers).
 %
@@ -45,8 +19,7 @@ buttonToVowel  = [1 2 3 1 2 3 1 2 3];% mapping GUI idx → vowel idx
 vowLabels      = {'IH','EH','AE'};   % order on GUI bottom row
 vowelCodeMap   = containers.Map({'IH','EH','AE'},{1,2,3});
 singleLetter   = containers.Map({'IH','EH','AE'},{'i','e','a'});
-f0Label        = containers.Map({'106.9','109.0'},1); % low_f0 ID = 1
-f0Label('151.2') = 2; f0Label('155.0') = 2; f0Label('201.8') = 2; % high_f0 ID = 2
+f0Label = containers.Map({'low_f0','high_f0'}, {1,2});
 % -----------------------------------------------------
 if nargin<4, catchflag=0; end
 if nargin<3, audflag  =0; end
@@ -202,3 +175,27 @@ end
 
 fclose('all'); close all; clear;  percentScore=100*totOKboth/howmany;
 end
+function stereo = pad_and_scale(yL,yR,audflag,scale,pad)
+    if audflag, % <insert HL-correction if you still need it>
+    end
+    stereo = [zeros(pad,2); [yL yR]; zeros(pad,2)] * scale;
+end
+
+function flash(h,idx,msg)
+    buttonv6(idx).name=msg; bcontrol(h,1,buttonv6,idx,'w',20); pause(.6);
+end
+
+function cat = pickCategory(f01,f02)
+    if  f01==1 && f02==1,        cat='lowlow';
+    elseif f01==2 && f02==2,     cat='highhigh';
+    else,                        cat='alt'; end
+end
+
+function out = pick(def,val,arr)
+    if val==-1, out=def; else, out=arr{val}; end
+end
+
+function out = pickStr(def,val,bv)
+    if val==-1, out='NA'; else, out=bv(val).name; end
+end
+
