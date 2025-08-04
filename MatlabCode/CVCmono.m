@@ -69,7 +69,7 @@ cvcLabelMap = containers.Map( ...
         'lid','led','lad', ...         % -d
         'lip','lep','lap' ...          % -p
     });
-
+vowelCodeMap = containers.Map({'IH','EH','AE'}, {'i','e','a'});
 
 %% --------------------- STIMULUS-LIST GENERATION ------------------------
 initials   = {'D','G','L'};
