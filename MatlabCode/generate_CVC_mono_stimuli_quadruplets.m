@@ -97,8 +97,14 @@ for i = 1:length(files)
 end
 
 % Shuffle reproducibly
-rng(seed); % seed can be numeric or string hash
+if ischar(seed) || isstring(seed)
+    numericSeed = sum(double(char(seed)));  % simple hash
+else
+    numericSeed = seed;
+end
+rng(numericSeed, 'twister');  % ensure reproducible sequence
 order = randperm(size(quads,1));
 quads = quads(order,:);
+
 
 end
