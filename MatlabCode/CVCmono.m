@@ -41,6 +41,7 @@ playScaleBinaural   = 10^(-32.5/20);   % both ears
 initials   = {'D','G','L'};
 finals     = {'D','F','TH','JH','G'};
 vowelMap   = containers.Map({'a','e','i'},{'AE','EH','IH'});
+vowLabels = {'IH','EH','AE'};
 f0Names    = {'high_f0','low_f0'};
 seed       = subjID;
 
@@ -135,77 +136,51 @@ bcontrol(guiHandle, 6, buttonv6, 0, 'blue', 40); pause(1);
 bcontrol(guiHandle, 6, buttonv6, 0, 'red',  30); pause(1);
 
 %% ---------------------------- MAIN LOOP --------------------------------
-rng('shuffle','twister');                           % randomize trial order
-totalCorrect       = 0;
-totalRespTime      = 0;
+rng('shuffle','twister');
+totalCorrect    = 0;
+totalRespTime   = 0;
 
+% Fixed button vowel order for GUI buttons
 for trialIdx = 1:howmany
     set(statusBar,'String',num2str(trialIdx));
 
-    % --- Wrap-around indexing (used in cases where trialIdx> number of stimuli)
+    % Wrap-around indexing
     idxInList   = mod(trialIdx-1, nStim) + 1;
     thisQuad    = quadList(shuffleIdx(idxInList), :);   % {C1,C2,V,f0,path}
 
-    vowStr      = thisQuad{3};          % e.g. 'AE'
-    f0Label     = thisQuad{4};          % e.g. 'high_f0'
-    wavFile     = thisQuad{5};
-
-    % Numeric vowID (needed for GUI buttons)
-    vowID = find(strcmp(vowLabels, vowStr));
-    if isempty(vowID)
-        error('Unexpected vowel label %s in file %s', vowStr, wavFile);
-    end
+    C1 = lower(thisQuad{1});
+    C2 = lower(thisQuad{2});
+    V  = thisQuad{3};      % 'IH','EH','AE'
+    f0Label = thisQuad{4};
+    wavFile = thisQuad{5};
 
     [wavData, fsFile] = audioread(wavFile);
-
-
-
-
     if fsFile ~= fsPlayback
         error('File %s has sampling rate %d, expected %d.', ...
-              filename, fsFile, fsPlayback);
+              wavFile, fsFile, fsPlayback);
     end
-    paddedMono      = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
+    paddedMono = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
 
-    %% --------- Ear-specific processing & attenuation -------------------
+    % Ear-specific processing & attenuation
     switch earIdx
         case 1     % Left-only
-            if audflag
-                [attenuatedData, ~, ~] = ampstim(paddedMono, fsPlayback, audiogram(1,:));
-                attenuatedData = attenuatedData / 10^(28/20);
-            else
-                attenuatedData = paddedMono;
-            end
-            stereoBuffer = [attenuatedData, zeros(size(attenuatedData))];
-            playScale    = playScaleLeft;
-
+            stereoBuffer = [paddedMono, zeros(size(paddedMono))]*playScaleLeft;
         case 2     % Right-only
-            if audflag
-                [attenuatedData, ~, ~] = ampstim(paddedMono, fsPlayback, audiogram(2,:));
-                attenuatedData = attenuatedData / 10^(28/20);
-            else
-                attenuatedData = paddedMono;
-            end
-            stereoBuffer = [zeros(size(attenuatedData)), attenuatedData];
-            playScale    = playScaleLeft;
-
+            stereoBuffer = [zeros(size(paddedMono)), paddedMono]*playScaleLeft;
         otherwise  % Both ears
-            if audflag
-                [leftData,  ~, ~] = ampstim(paddedMono, fsPlayback, audiogram(1,:));
-                [rightData, ~, ~] = ampstim(paddedMono, fsPlayback, audiogram(2,:));
-                leftData  = leftData  / 10^(28/20);
-                rightData = rightData / 10^(28/20);
-            else
-                leftData  = paddedMono;
-                rightData = paddedMono;
-            end
-            stereoBuffer = [leftData, rightData];
-            playScale    = playScaleBinaural;
+            stereoBuffer = [paddedMono, paddedMono]*playScaleBinaural;
     end
 
-    stereoBuffer = stereoBuffer * playScale;
+    %% Update buttons dynamically based on current trial
+    for iV = 1:length(vowLabels)
+        % Top row: cvc (lowercase concatenation)
+        buttonv6(iV).name = sprintf('%s%s%s', C1, lower(vowLabels{iV}), C2);
+        % Bottom row: -V- (uppercase vowel)
+        buttonv6(iV+3).name = sprintf('-%s-', vowLabels{iV});
+    end
+    bcontrol(guiHandle, 6, buttonv6, 0, 'red', 28);
 
-    %% --------- Play stimulus & collect response ------------------------
+    %% Play stimulus and collect response
     buttonv6(9).name = sprintf('Playing trial %d of %d...', trialIdx, howmany);
     bcontrol(guiHandle, 1, buttonv6, 9, 'w', 20);
     pause(0.7);
@@ -216,29 +191,38 @@ for trialIdx = 1:howmany
     buttonv6(9).name = 'Which vowel did you hear?';
     bcontrol(guiHandle, 1, buttonv6, 9, 'w', 20);
 
-    shp        = 0;
-    tStart     = tic;
-    waitButton;                    % blocks until subject answers
-    respTime   = toc(tStart);
-    answer     = shp;
+    shp      = 0;
+    tStart   = tic;
+    waitButton;
+    respTime = toc(tStart);
+    answer   = shp;  % 1–6 button pressed
 
-    %% --------- Feedback (optional) -------------------------------------
+    %% Check correctness (mapping button pressed → vowel)
+    buttonToVowel = [1 2 3 1 2 3]; % IH,EH,AE,IH,EH,AE mapping
+    correctVowelIndex = find(strcmp(vowLabels, V));
+
+    % Correct if chosen vowel matches stimulus vowel
+    pressedVowelIndex = buttonToVowel(answer);
+    correct = (pressedVowelIndex == correctVowelIndex);
+
+    % Update score
+    totalCorrect   = totalCorrect + correct;
+    totalRespTime  = totalRespTime + respTime;
+
+    fprintf(fidResults,'%d %s %d %d %.4f\n', correctVowelIndex, f0Label, ...
+        answer, correct, respTime);
+
+    %% Feedback (optional, highlight correct button)
     if feedback == 'y'
-        bcontrol(guiHandle,1,buttonv6,vowID,'blue',40); pause(1);
-        bcontrol(guiHandle,1,buttonv6,vowID,'red', 30); pause(1);
+        correctButtonIdx = correctVowelIndex;
+        bcontrol(guiHandle,1,buttonv6,correctButtonIdx,'blue',40); pause(1);
+        bcontrol(guiHandle,1,buttonv6,correctButtonIdx,'red', 30); pause(1);
     else
         pause(0.5);
     end
 
-    %% --------- Update score & write trial line -------------------------
-    correct          = (answer == vowID);
-    totalCorrect     = totalCorrect + correct;
-    totalRespTime    = totalRespTime + respTime;
-
-    fprintf(fidResults,'%d %s %d %d %.4f\n', vowID, f0Label, ...
-        answer, correct, respTime);
-
 end
+
 
 %% ------------------------- FINAL SUMMARY -------------------------------
 buttonv6(9).name = 'Run finished.';
