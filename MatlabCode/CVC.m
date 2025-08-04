@@ -20,7 +20,8 @@ vowLabels      = {'IH','EH','AE'};   % order on GUI bottom row
 vowelCodeMap   = containers.Map({'IH','EH','AE'},{1,2,3});
 singleLetter   = containers.Map({'IH','EH','AE'},{'i','e','a'});
 f0Label = containers.Map({'low_f0','high_f0'}, {1,2});
-
+consonantList = {'d','g','l','f','th','jh'};
+consonantID   = 1:numel(consonantList);
 
 
 
@@ -32,7 +33,7 @@ finals   = {'D','F','TH','JH','G'};
 vMap     = containers.Map({'a','e','i'},{'AE','EH','IH'});
 f0Names  = {'high_f0','low_f0'};
 
-monoPairs = round(howmany*0.2);          % e.g. 20 % identical L/R
+monoPairs = round(howmany*0.1);          % e.g. 10 % identical L/R
 pairList  = generate_CVC_dichotic_pairs( ...
                 stimRoot, subjID, initials, finals, vMap, f0Names, ...
                 monoPairs, {'AE','IH'});       % returns Nx2 cell array
@@ -87,7 +88,8 @@ for trial = 1:howmany
     C1 = L{1};  C2 = L{2};
     V1 = L{3};  V2 = R{3};
     f01= L{4};  f02= R{4};
-
+    f01id = f0Label(f01);
+    f02id = f0Label(f02);
     wavL = audioread(L{5});
     wavR = audioread(R{5});
 
