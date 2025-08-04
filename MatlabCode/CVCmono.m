@@ -44,6 +44,9 @@ vowelMap   = containers.Map({'a','e','i'},{'AE','EH','IH'});
 f0Names    = {'high_f0','low_f0'};
 seed       = subjID;
 
+
+
+
 % make a reproducable seed
 if ischar(seed) || isstring(seed)
     % Simple hash: sum of character codes
@@ -79,6 +82,7 @@ if isempty(earIdx)
 end
 
 % Prepare subject data directory
+dataPath = fullfile('/Experiments/Data', subjID);  % <-- FIXED: define dataPath
 if ~exist(dataPath, 'dir')
     if ~mkdir('/Experiments/Data/', subjID)
         error('Unable to create subject directory.');
