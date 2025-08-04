@@ -42,7 +42,7 @@ initials   = {'D','G','L'};
 finals     = {'D','F','TH','JH','G'};
 vowelMap   = containers.Map({'a','e','i'},{'AE','EH','IH'});
 f0Names    = {'high_f0','low_f0'};
-
+seed       = subjID;
 
 % make a reproducable seed
 if ischar(seed) || isstring(seed)
