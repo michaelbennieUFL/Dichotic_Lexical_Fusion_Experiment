@@ -23,7 +23,19 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
     consonantList = {'d','g','l','f','th','jh'};
     consonantID   = 1:numel(consonantList);
 
-
+    % ------------------------------------------------------------------------
+    %  GUI label overrides for specific CVC triplets
+    % ------------------------------------------------------------------------
+    cvcLabelMap = containers.Map( ...
+        { ...
+            'did','ded','dad','dijh','dejh','dajh','dif','def','daf','dish','desh','dash', ...
+            'gig','geg','gag','gith','geth','gath','git','get','gat', ...
+            'lijh','lejh','lajh','lith','leth','lath','lid','led','lad','lip','lep','lap' ...
+        },{ ...
+            'did','dead','dad','didge','dedge','dadge','diff','deaf','daff','dish','desh','dash', ...
+            'gig','geg','gag','gith','geth','gath','git','get','gat', ...
+            'lidge','ledge','ladge','lith','leth','lath','lid','led','lad','lip','lep','lap' ...
+        });
 
     %% =====  BUILD PLAYLIST  (mono + dichotic)  =============================
     stimRoot = '/SoundFiles/CVC2025/Dichotic_Lexical_Fusion_Experiment/actual_stimuli';
@@ -60,6 +72,42 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
     fidInt  = fopen(intFile ,'wt');
     fidHum  = fopen(humanFile,'wt');
 
+
+    ear = 'B';
+    audiogram = [];                    % default → empty (= NH)
+    if audflag
+        fidAudiogram = fopen('Audiogram.txt','r');
+        if fidAudiogram == -1, error('Audiogram.txt not found for %s.', subjID); end
+        unused_var = fscanf(fidAudiogram, '%i', [8 1])';           % frequencies (unused)
+        audiogram  = fscanf(fidAudiogram, '%f', [8 2])';  % rows: L  R
+        fclose(fidAudiogram);
+    else
+        aLeft  = 'NA'; aRight = 'NA';
+    end
+
+    % ----- shared header lines --------------------------------------------
+    fprintf(fidInt ,'Ear: %s\n', ear);
+    fprintf(fidHum ,'Ear: %s\n', ear);
+    if audflag
+        fprintf(fidInt ,'Audiogram left  : [%s]\n',sprintf('%.0f ',audiogram(1,:)));
+        fprintf(fidInt ,'Audiogram right : [%s]\n',sprintf('%.0f ',audiogram(2,:)));
+        fprintf(fidHum ,'Audiogram left  : [%s]\n',sprintf('%.0f ',audiogram(1,:)));
+        fprintf(fidHum ,'Audiogram right : [%s]\n',sprintf('%.0f ',audiogram(2,:)));
+    else
+        fprintf(fidInt ,'Audiogram left  : NA\nAudiogram right : NA\n');
+        fprintf(fidHum ,'Audiogram left  : NA\nAudiogram right : NA\n');
+    end
+
+
+    fprintf(fidInt,'# Keys:\n# Consonant_ID  : ');
+    for k=1:numel(consonantList)
+        fprintf(fidInt,'%s=%d ',consonantList{k},consonantID(k));
+    end
+    fprintf(fidInt,'\n# Vowel_ID      : IH=1 EH=2 AE=3 \n');
+    fprintf(fidInt,'# F0_ID         : high_f0=1 low_f0=2 \n');
+
+
+
     % headers -----------------------------------------------------------------
     fprintf(fidInt ,'Con1 Con2 V1 V2 F01 F02 Ans1V Ans2V Ans3V Ans1C Ans2C Ans3C OneType BothOK RT\n');
     fprintf(fidHum ,'C1 C2 Vowel1 Vowel2 F0_1 F0_2 Ans1V Ans2V Ans3V Ans1C Ans2C Ans3C Ans1 Ans2 Ans3 OneType BothOK RT\n');
@@ -94,15 +142,20 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
         wavR = audioread(R{5});
 
         %% ---- build GUI buttons --------------------------------------------
-        for i=1:3
-            key=[lower(C1) singleLetter(vowLabels{i}) lower(C2)];
-            buttonv6(i).name = key;                    % no fancy map here
-            buttonv6(i+3).name = vowLabels{i};
+        for i = 1:3
+            keyPhon = lower([C1 singleLetter(vowLabels{i}) C2]);   % e.g. lajh
+            if  isKey(cvcLabelMap,keyPhon)
+                buttonv6(i).name = cvcLabelMap(keyPhon);           % pretty label
+            else
+                buttonv6(i).name = keyPhon;                        % fallback
+            end
+            buttonv6(i+3).name = vowLabels{i};                     % IH / EH / AE
         end
+
         bcontrol(h,6,buttonv6,0,'red',28);
 
         %% ---- play  (with optional HL correction) --------------------------
-        stereo = pad_and_scale(wavL,wavR, audflag, playScale, padSamples);
+        stereo = pad_and_scale(wavL,wavR,audflag,audiogram,playScale,padSamples);
         buttonv6(9).name=sprintf('Playing trial %d of %d...',trial,howmany);
         bcontrol(h,1,buttonv6,9,'w',20); pause(.7);
         a=audioplayer(stereo,fsPlayback,bits); playblocking(a); pause(.3);
@@ -251,24 +304,28 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
     clearvars -except percentScore            % keep only the output
 end   % =======================  CVC  =======================
 
-function stereo = pad_and_scale(yL, yR, audflag, scale, pad)
-    % --- 1. make sure they are column-vectors ---------------------------
-    yL = yL(:);
-    yR = yR(:);
+function stereo = pad_and_scale(yL,yR,audflag,audiogram,scale,pad)
+    % 1 · force column vectors
+    yL = yL(:); yR = yR(:);
 
-    % --- 2. equalise lengths by zero-padding the shorter ----------------
-    N  = max(numel(yL), numel(yR));
-    if numel(yL) < N,  yL(end+1:N) = 0; end
-    if numel(yR) < N,  yR(end+1:N) = 0; end
+    % 2 · match durations
+    N  = max(numel(yL),numel(yR));
+    if numel(yL)<N, yL(end+1:N)=0; end
+    if numel(yR)<N, yR(end+1:N)=0; end
 
-    % --- 3. (optionally) apply HL correction here -----------------------
-    if audflag
-        % ... your audiogram processing ...
+    % 3 · HL compensation (only if audiogram provided)
+    if audflag && ~isempty(audiogram)
+        [yL,~,~] = ampstim(yL,44100,audiogram(1,:));   % left ear
+        [yR,~,~] = ampstim(yR,44100,audiogram(2,:));   % right ear
+        % CV divides by 10^(28/20) afterwards — keep it for consistency
+        yL = yL / 10^(28/20);
+        yR = yR / 10^(28/20);
     end
 
-    % --- 4. add onset/offset padding and overall scale ------------------
+    % 4 · leading / trailing zeros and global scale
     stereo = [zeros(pad,2); [yL yR]; zeros(pad,2)] * scale;
 end
+
 
 
 function flash(h,idx,msg)
