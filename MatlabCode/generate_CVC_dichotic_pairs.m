@@ -31,6 +31,10 @@ for i = 1:size(allQuads,1)
     quadMap(key(allQuads{i,1:4})) = allQuads{i,5};
 end
 
+% --- make sure *seed* is an integer -------------------------------
+if ischar(seed) || isstring(seed)
+    seed = sum(double(char(seed)));   % simple deterministic hash
+end
 rng(seed,'twister');
 
 pairs = {};
