@@ -45,32 +45,26 @@ f0IDMap       = containers.Map(f0List, f0ID);
 % ------------------------------------------------------------------------
 cvcLabelMap = containers.Map( ...
     { ...
-        % d- initial
-        'did','ded','dad', ...
+        'did','ded','dad', ...             % d- initial
         'dijh','dejh','dajh', ...
         'dif','def','daf', ...
         'dish','desh','dash', ...
-        % g- initial
-        'gig','geg','gag', ...
+        'gig','geg','gag', ...           % g- initial
         'gith','geth','gath', ...
         'git','get','gat', ...
-        % l- initial
-        'lijh','lejh','lajh', ...
+        'lijh','lejh','lajh', ...        % l- initial
         'lith','leth','lath', ...
         'lid','led','lad', ...
         'lip','lep','lap' ...
     },{ ...
-        % d- initial
-        'did','dead','dad', ...        % -d
+        'did','dead','dad', ...        % -d        % d- initial
         'didge','dedge','dadge', ...   % -jh  →  -dge
         'diff','deaf','daff', ...      % -f   : “deaf” matches /dɛf/
         'dish','desh','dash', ...      % -sh
-        % g- initial
-        'gig','geg','gag', ...         % -g
+        'gig','geg','gag', ...         % -g         % g- initial
         'gith','geth','gath', ...      % -th
         'git','get','gat', ...         % -t
-        % l- initial
-        'lidge','ledge','ladge', ...   % -jh  →  -dge
+        'lidge','ledge','ladge', ...   % -jh  →  -dge         % l- initial
         'lith','leth','lath', ...      % -th
         'lid','led','lad', ...         % -d
         'lip','lep','lap' ...          % -p
@@ -116,7 +110,7 @@ cd(dataPath);
 if audflag
     fidAudiogram = fopen('Audiogram.txt','r');
     if fidAudiogram == -1, error('Audiogram.txt not found for %s.', subjID); end
-    ~ = fscanf(fidAudiogram, '%i', [8 1])';           % frequencies (unused)
+    unused_var = fscanf(fidAudiogram, '%i', [8 1])';           % frequencies (unused)
     audiogram  = fscanf(fidAudiogram, '%f', [8 2])';  % rows: L  R
     fclose(fidAudiogram);
 end
@@ -204,16 +198,20 @@ for trialIdx = 1:howmany
         otherwise, stereoBuffer=[paddedMono,paddedMono]*playScaleBinaural;
     end
 
-    % --- Update GUI buttons for this trial -----------------------------
+    % --- Update GUI buttons for this trial ---------------------------------
     for iV = 1:numel(vowLabels)
-        labelKey = [C1 lower(vowLabels{iV}) C2];
-        if isKey(cvcLabelMap, labelKey)
+        oneLetter = vowelCodeMap(vowLabels{iV});   % 'IH' → 'i', etc.
+        labelKey  = [C1 oneLetter C2];             % e.g. 'lajh'
+
+        if isKey(cvcLabelMap,labelKey)
             buttonv6(iV).name = cvcLabelMap(labelKey);
         else
-            buttonv6(iV).name = labelKey;
+            buttonv6(iV).name = labelKey;          % fallback
         end
-        buttonv6(iV+3).name = vowLabels{iV};
+
+        buttonv6(iV+3).name = vowLabels{iV};       % bottom row stays IH/EH/AE
     end
+
 
     bcontrol(guiHandle,6,buttonv6,0,'red',28);
 
