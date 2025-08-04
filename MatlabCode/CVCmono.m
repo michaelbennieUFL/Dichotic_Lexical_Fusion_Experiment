@@ -36,16 +36,30 @@ padSamples          = 2000;
 playScaleLeft       = 10^(-31/20);     % left or right only
 playScaleBinaural   = 10^(-32.5/20);   % both ears
 
-% Stimulus labels ---------------------------------------------------------
-vowLabels   = ['AH'; 'UH'; 'OO'; 'AE'; 'IH'; 'EE'];   % 6 vowels
-F0Labels    = ['106.9'; '151.2'; '201.8'];            % 3 F0s
+%% --------------------- STIMULUS-LIST GENERATION ------------------------
+% top-level options used by the quad-generator
+initials   = {'D','G','L'};
+finals     = {'D','F','TH','JH','G'};
+vowelMap   = containers.Map({'a','e','i'},{'AE','EH','IH'});
+f0Names    = {'high_f0','low_f0'};
+seed       = subjID;                        % anything reproducible
 
-% Build lookup table: [vowelIdx, F0Idx] for every token
-stimTable(:,1) = repelem(1:6,12)';                    % vowel index
-stimTable(:,2) = repmat([1 1 1 1 2 2 2 2 3 3 3 3]',6,1);  % F0 index
+% Root that contains all *_run folders:
+stimRoot   = '/SoundFiles/ConcurrVowels';   % one level **above** sub-folders
 
-soundPath   = '/SoundFiles/ConcurrVowels/New8vowels/';
-dataPath    = ['/Experiments/Data/' subjID '/'];
+% Get {C1,C2,V,f0,path} and shuffle once
+quadList   = generate_CVC_mono_stimuli_quadruplets( ...
+                 stimRoot, seed, initials, finals, vowelMap, f0Names);
+nStim      = size(quadList,1);
+
+if nStim == 0
+    error('No usable stimulus files found under %s', stimRoot);
+end
+
+% Random order we will keep re-using with modulo indexing
+rng('shuffle','twister');
+shuffleIdx = randperm(nStim);
+
 
 %% --------------------------- INITIAL SETUP -----------------------------
 % Validate ear selection
@@ -108,21 +122,31 @@ bcontrol(guiHandle, 6, buttonv6, 0, 'red',  30); pause(1);
 
 %% ---------------------------- MAIN LOOP --------------------------------
 rng('shuffle','twister');                           % randomize trial order
-trialOrder         = mod(randperm(maxTrials), maxTrials) + 1;
 totalCorrect       = 0;
 totalRespTime      = 0;
 
 for trialIdx = 1:howmany
     set(statusBar,'String',num2str(trialIdx));
 
-    %% --------- Load and pad stimulus (mono) ----------------------------
-    thisStim        = trialOrder(trialIdx);
-    vowID           = stimTable(thisStim,1);
-    F0ID            = stimTable(thisStim,2);
+    % --- Wrap-around indexing (used in cases where trialIdx> number of stimuli)
+    idxInList   = mod(trialIdx-1, nStim) + 1;
+    thisQuad    = quadList(shuffleIdx(idxInList), :);   % {C1,C2,V,f0,path}
 
-    filename        = sprintf('%s%s_%s.wav', soundPath, ...
-                      vowLabels(vowID,:), F0Labels(F0ID,:));
-    [wavData, fsFile] = audioread(filename);
+    vowStr      = thisQuad{3};          % e.g. 'AE'
+    f0Label     = thisQuad{4};          % e.g. 'high_f0'
+    wavFile     = thisQuad{5};
+
+    % Numeric vowID (needed for GUI buttons)
+    vowID = find(strcmp(vowLabels, vowStr));
+    if isempty(vowID)
+        error('Unexpected vowel label %s in file %s', vowStr, wavFile);
+    end
+
+    [wavData, fsFile] = audioread(wavFile);
+
+
+
+
     if fsFile ~= fsPlayback
         error('File %s has sampling rate %d, expected %d.', ...
               filename, fsFile, fsPlayback);
@@ -197,8 +221,9 @@ for trialIdx = 1:howmany
     totalCorrect     = totalCorrect + correct;
     totalRespTime    = totalRespTime + respTime;
 
-    fprintf(fidResults,'%d %d %d %d %.4f\n', vowID, F0ID, ...
-            answer, correct, respTime);
+    fprintf(fidResults,'%d %s %d %d %.4f\n', vowID, f0Label, ...
+        answer, correct, respTime);
+
 end
 
 %% ------------------------- FINAL SUMMARY -------------------------------
