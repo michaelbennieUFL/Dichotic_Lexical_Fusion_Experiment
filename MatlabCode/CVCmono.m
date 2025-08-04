@@ -42,10 +42,20 @@ initials   = {'D','G','L'};
 finals     = {'D','F','TH','JH','G'};
 vowelMap   = containers.Map({'a','e','i'},{'AE','EH','IH'});
 f0Names    = {'high_f0','low_f0'};
-seed       = subjID;                        % anything reproducible
+
+
+% make a reproducable seed
+if ischar(seed) || isstring(seed)
+    % Simple hash: sum of character codes
+    numericSeed = sum(double(char(seed)));
+else
+    numericSeed = seed;
+end
+rng(numericSeed);
+
 
 % Root that contains all *_run folders:
-stimRoot   = '/SoundFiles/ConcurrVowels';   % one level **above** sub-folders
+stimRoot   = '/SoundFiles/CVC2025/Dichotic_Lexical_Fusion_Experiment/actual_stimuli';   % one level **above** sub-folders
 
 % Get {C1,C2,V,f0,path} and shuffle once
 quadList   = generate_CVC_mono_stimuli_quadruplets( ...
