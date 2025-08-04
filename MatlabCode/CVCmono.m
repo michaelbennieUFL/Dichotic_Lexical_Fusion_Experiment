@@ -36,32 +36,36 @@ padSamples          = 2000;
 playScaleLeft       = 10^(-31/20);     % left or right only
 playScaleBinaural   = 10^(-32.5/20);   % both ears
 
+%% ----------- LOOKUP-TABLES: label <-> integer mapping -------------------
+consonantList = {'d','g','l','f','th','jh'};
+consonantID   = 1:numel(consonantList);
+consonantMap  = containers.Map(consonantList, consonantID);
+
+vowelList     = {'IH','EH','AE'};
+vowelID       = 1:numel(vowelList);
+vowelIDMap    = containers.Map(vowelList, vowelID);
+
+f0List        = {'high_f0','low_f0'};
+f0ID          = 1:numel(f0List);
+f0IDMap       = containers.Map(f0List, f0ID);
+
 %% --------------------- STIMULUS-LIST GENERATION ------------------------
-% top-level options used by the quad-generator
 initials   = {'D','G','L'};
 finals     = {'D','F','TH','JH','G'};
 vowelMap   = containers.Map({'a','e','i'},{'AE','EH','IH'});
-vowLabels = {'IH','EH','AE'};
+vowLabels  = {'IH','EH','AE'};
 f0Names    = {'high_f0','low_f0'};
 seed       = subjID;
 
-
-
-
-% make a reproducable seed
 if ischar(seed) || isstring(seed)
-    % Simple hash: sum of character codes
     numericSeed = sum(double(char(seed)));
 else
     numericSeed = seed;
 end
 rng(numericSeed);
 
+stimRoot   = '/SoundFiles/CVC2025/Dichotic_Lexical_Fusion_Experiment/actual_stimuli';
 
-% Root that contains all *_run folders:
-stimRoot   = '/SoundFiles/CVC2025/Dichotic_Lexical_Fusion_Experiment/actual_stimuli';   % one level **above** sub-folders
-
-% Get {C1,C2,V,f0,path} and shuffle once
 quadList   = generate_CVC_mono_stimuli_quadruplets( ...
                  stimRoot, seed, initials, finals, vowelMap, f0Names);
 nStim      = size(quadList,1);
@@ -70,19 +74,15 @@ if nStim == 0
     error('No usable stimulus files found under %s', stimRoot);
 end
 
-% Random order we will keep re-using with modulo indexing
 rng('shuffle','twister');
 shuffleIdx = randperm(nStim);
 
-
 %% --------------------------- INITIAL SETUP -----------------------------
-% Validate ear selection
 earIdx = strmatch(upper(ear), ['L'; 'R'; 'B']);
 if isempty(earIdx)
     error('Ear must be ''L'', ''R'', or ''B''.');
 end
 
-% Prepare subject data directory
 dataPath = fullfile('/Experiments/Data', subjID);  % <-- FIXED: define dataPath
 if ~exist(dataPath, 'dir')
     if ~mkdir('/Experiments/Data/', subjID)
@@ -91,7 +91,6 @@ if ~exist(dataPath, 'dir')
 end
 cd(dataPath);
 
-% Read audiogram if needed
 if audflag
     fidAudiogram = fopen(sprintf('Audiogram.txt'), 'r');
     if fidAudiogram == -1
@@ -102,19 +101,37 @@ if audflag
     fclose(fidAudiogram);
 end
 
-% Prepare results file (auto-increment if file exists)
-resultsFile = fileExistCheck(dir, [subjID '_CV6mono_0.txt']);
-fidResults  = fopen(resultsFile, 'wt');
-fprintf(fidResults,'Ear: %s\n', ear);
-if audflag
-    fprintf(fidResults,'Audiogram left  : [%s]\n', sprintf('%d ', audiogram(1,:)));
-    fprintf(fidResults,'Audiogram right : [%s]\n', sprintf('%d ', audiogram(2,:)));
-else
-    fprintf(fidResults,'Audiogram left  : NA\n');
-    fprintf(fidResults,'Audiogram right : NA\n');
+%% -------------- Prepare both results files: int + human ----------------
+intFile   = fileExistCheck(dir, [subjID '_CVCmono_0.txt']);
+humanFile = fileExistCheck(dir, [subjID '_CVCmono_human_readable_0.txt']);
+
+fidInt = fopen(intFile  ,'wt');
+fidHum = fopen(humanFile,'wt');
+
+% Key header for the integer file
+fprintf(fidInt,'# Keys:\n# Consonant_ID  : ');
+for k=1:numel(consonantList)
+    fprintf(fidInt,'%s=%d ', consonantList{k}, consonantID(k));
 end
-fprintf(fidResults,'vowID F0ID answer correct timeElapsed\n');
-fprintf('Results saved to %s\n', fullfile(dataPath, resultsFile));
+fprintf(fidInt,'\n');
+fprintf(fidInt,'# Vowel_ID      : ');
+for k=1:numel(vowelList)
+    fprintf(fidInt,'%s=%d ', vowelList{k}, vowelID(k));
+end
+fprintf(fidInt,'\n');
+fprintf(fidInt,'# F0_ID         : ');
+for k=1:numel(f0List)
+    fprintf(fidInt,'%s=%d ', f0List{k}, f0ID(k));
+end
+fprintf(fidInt,'\n');
+fprintf(fidInt,['# Columns       : Consonant_1_ID Consonant_2_ID Vowel_ID ' ...
+                'F0_ID Heard_Consonant Answer_vowel Correct Time_elapsed\n']);
+
+% Header for human-readable file
+fprintf(fidHum,'Vowel F0 Answer Answer_vowel Heard_Consonant Heard_correct_vowel Time_elapsed\n');
+
+fprintf('Results saved to\n  %s  (integers + key)\n  %s  (readable)\n',...
+            fullfile(dataPath,intFile), fullfile(dataPath,humanFile));
 
 %% ------------------------ GUI / HARDWARE SETUP -------------------------
 originalDir   = pwd;
@@ -131,7 +148,6 @@ bcontrol(guiHandle, 1, buttonv6, 9, 'w', 20);
 shp           = 0;
 waitButton;   % block until participant presses a button
 
-% Flash GUI to get participant’s attention
 bcontrol(guiHandle, 6, buttonv6, 0, 'blue', 40); pause(1);
 bcontrol(guiHandle, 6, buttonv6, 0, 'red',  30); pause(1);
 
@@ -140,11 +156,9 @@ rng('shuffle','twister');
 totalCorrect    = 0;
 totalRespTime   = 0;
 
-% Fixed button vowel order for GUI buttons
 for trialIdx = 1:howmany
     set(statusBar,'String',num2str(trialIdx));
 
-    % Wrap-around indexing
     idxInList   = mod(trialIdx-1, nStim) + 1;
     thisQuad    = quadList(shuffleIdx(idxInList), :);   % {C1,C2,V,f0,path}
 
@@ -156,12 +170,10 @@ for trialIdx = 1:howmany
 
     [wavData, fsFile] = audioread(wavFile);
     if fsFile ~= fsPlayback
-        error('File %s has sampling rate %d, expected %d.', ...
-              wavFile, fsFile, fsPlayback);
+        error('File %s has sampling rate %d, expected %d.', wavFile, fsFile, fsPlayback);
     end
     paddedMono = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
 
-    % Ear-specific processing & attenuation
     switch earIdx
         case 1     % Left-only
             stereoBuffer = [paddedMono, zeros(size(paddedMono))]*playScaleLeft;
@@ -171,16 +183,12 @@ for trialIdx = 1:howmany
             stereoBuffer = [paddedMono, paddedMono]*playScaleBinaural;
     end
 
-    %% Update buttons dynamically based on current trial
     for iV = 1:length(vowLabels)
-        % Top row: cvc (lowercase concatenation)
-        buttonv6(iV).name = sprintf('%s%s%s', C1, lower(vowLabels{iV}), C2);
-        % Bottom row: -V- (uppercase vowel)
+        buttonv6(iV).name   = sprintf('%s%s%s', C1, lower(vowLabels{iV}), C2);
         buttonv6(iV+3).name = sprintf('-%s-', vowLabels{iV});
     end
     bcontrol(guiHandle, 6, buttonv6, 0, 'red', 28);
 
-    %% Play stimulus and collect response
     buttonv6(9).name = sprintf('Playing trial %d of %d...', trialIdx, howmany);
     bcontrol(guiHandle, 1, buttonv6, 9, 'w', 20);
     pause(0.7);
@@ -188,7 +196,7 @@ for trialIdx = 1:howmany
     sound(stereoBuffer, fsPlayback);
     pause(0.3);
 
-    buttonv6(9).name = 'Which vowel did you hear?';
+    buttonv6(9).name = 'Which word/individual vowel did you hear?';
     bcontrol(guiHandle, 1, buttonv6, 9, 'w', 20);
 
     shp      = 0;
@@ -197,22 +205,30 @@ for trialIdx = 1:howmany
     respTime = toc(tStart);
     answer   = shp;  % 1–6 button pressed
 
-    %% Check correctness (mapping button pressed → vowel)
     buttonToVowel = [1 2 3 1 2 3]; % IH,EH,AE,IH,EH,AE mapping
     correctVowelIndex = find(strcmp(vowLabels, V));
 
-    % Correct if chosen vowel matches stimulus vowel
     pressedVowelIndex = buttonToVowel(answer);
     correct = (pressedVowelIndex == correctVowelIndex);
 
-    % Update score
-    totalCorrect   = totalCorrect + correct;
-    totalRespTime  = totalRespTime + respTime;
+    % -------------------- Save both human + int files ------------------
+    c1ID   = consonantMap(C1);     % convert to int
+    c2ID   = consonantMap(C2);
+    vowID  = vowelIDMap(V);
+    f0IDn  = f0IDMap(f0Label);
 
-    fprintf(fidResults,'%d %s %d %d %.4f\n', correctVowelIndex, f0Label, ...
-        answer, correct, respTime);
+    heardConsonant = answer <= 3;     % 1–3 are CVC (consonant) choices
+    answerVowelID  = buttonToVowel(answer);  % 1–3 mapping
 
-    %% Feedback (optional, highlight correct button)
+    % Integer file:      C1_ID C2_ID V_ID F0_ID Heard_Consonant Answer_vowel Correct Time_elapsed
+    fprintf(fidInt,'%d %d %d %d %d %d %d %.4f\n', ...
+        c1ID, c2ID, vowID, f0IDn, heardConsonant, answerVowelID, correct, respTime);
+
+    % Human-readable:    Vowel F0 Answer Answer_vowel Heard_Consonant Heard_correct_vowel Time_elapsed
+    fprintf(fidHum,'%s %s %s %s %d %d %.4f\n', ...
+        V, f0Label, buttonv6(answer).name, vowelList{answerVowelID}, heardConsonant, correct, respTime);
+
+    % ------------- Feedback (optional, highlight correct button) -------------
     if feedback == 'y'
         correctButtonIdx = correctVowelIndex;
         bcontrol(guiHandle,1,buttonv6,correctButtonIdx,'blue',40); pause(1);
@@ -220,9 +236,7 @@ for trialIdx = 1:howmany
     else
         pause(0.5);
     end
-
 end
-
 
 %% ------------------------- FINAL SUMMARY -------------------------------
 buttonv6(9).name = 'Run finished.';
@@ -233,10 +247,10 @@ meanRT        = totalRespTime/howmany;
 
 fprintf('Score: %5.2f %%  |  Mean RT: %5.2f s\n', percentScore, meanRT);
 
-fclose('all');
+fclose(fidInt);
+fclose(fidHum);
 cd(originalDir);
 
-% End-of-session GUI flash
 for k = 1:3
     bcontrol(guiHandle,6,buttonv6,0,'blue',30); pause(0.8);
     bcontrol(guiHandle,6,buttonv6,0,'red', 20); pause(0.8);
