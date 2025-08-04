@@ -236,11 +236,25 @@ end
 
 fclose('all'); close all; clear;  percentScore=100*totOKboth/howmany;
 end
-function stereo = pad_and_scale(yL,yR,audflag,scale,pad)
-    if audflag, % <insert HL-correction if you still need it>
+function stereo = pad_and_scale(yL, yR, audflag, scale, pad)
+    % --- 1. make sure they are column-vectors ---------------------------
+    yL = yL(:);
+    yR = yR(:);
+
+    % --- 2. equalise lengths by zero-padding the shorter ----------------
+    N  = max(numel(yL), numel(yR));
+    if numel(yL) < N,  yL(end+1:N) = 0; end
+    if numel(yR) < N,  yR(end+1:N) = 0; end
+
+    % --- 3. (optionally) apply HL correction here -----------------------
+    if audflag
+        % ... your audiogram processing ...
     end
+
+    % --- 4. add onset/offset padding and overall scale ------------------
     stereo = [zeros(pad,2); [yL yR]; zeros(pad,2)] * scale;
 end
+
 
 function flash(h,idx,msg)
     global buttonv6
