@@ -166,6 +166,7 @@ for iV = 1:3
 end
 buttonv6(9).name = 'Press any button to start.';
 bcontrol(guiHandle,1,buttonv6,9,'w',20);
+bcontrol(guiHandle,6,buttonv6,0,'w', 30);
 shp = 0; waitButton;
 
 bcontrol(guiHandle,6,buttonv6,0,'blue',40); pause(1);
