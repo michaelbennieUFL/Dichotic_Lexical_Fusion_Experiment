@@ -107,7 +107,7 @@ bcontrol(guiHandle, 6, buttonv6, 0, 'blue', 40); pause(1);
 bcontrol(guiHandle, 6, buttonv6, 0, 'red',  30); pause(1);
 
 %% ---------------------------- MAIN LOOP --------------------------------
-rng('shuffle');                         % randomize trial order
+rng('shuffle','twister');                           % randomize trial order
 trialOrder         = mod(randperm(maxTrials), maxTrials) + 1;
 totalCorrect       = 0;
 totalRespTime      = 0;
