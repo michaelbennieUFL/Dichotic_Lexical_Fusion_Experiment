@@ -253,8 +253,10 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
 
         %% ---- write files ---------------------------------------------------
         fmtInt = '%d %d %d %d %d %d %d %d %d %d %d %d %d %d %.4f\n';
-        fmtHum = ['%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t' ...
-                    '%s\t%s\t%s\t%d\t%d\t%.4f\t%s\t%s\t%s\n'];
+        fmtHum = ['%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t' ...   % up to Ans3V
+                  '%d\t%d\t%d\t' ...                               % Ans1C-3C
+                  '%s\t%s\t%s\t' ...                               % Ans1-3 labels
+                  '%d\t%d\t%.4f\t%s\t%s\t%s\n'];                  % OneType … Audiogram_R
         v1id=vowelCodeMap(V1); v2id=vowelCodeMap(V2);
         fprintf(fidInt,fmtInt,...
                 trial, ...
@@ -266,7 +268,7 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
 
         fprintf(fidHum,fmtHum, ...
                 trial, C1,C2,V1,V2,f01,f02, ...
-                vowLabels{max(ansVowel(1),1)}, ...
+                pick(-1,ansVowel(1),vowLabels), ...
                 pick(-1,ansVowel(2),vowLabels), ...
                 pick(-1,ansVowel(3),vowLabels), ...
                 ansCons(1),ansCons(2),ansCons(3), ...
@@ -357,9 +359,11 @@ function cat = pickCategory(f01,f02)
 end
 
 function out = pick(def,val,arr)
+    if nargin < 1 || isempty(def), def = 'NaN'; end
     if val==-1, out=def; else, out=arr{val}; end
 end
 
 function out = pickStr(def,val,bv)
-    if val==-1, out='NA'; else, out=bv(val).name; end
+    if nargin < 1 || isempty(def), def = 'NaN'; end
+    if val==-1, out=def; else, out=bv(val).name; end
 end
