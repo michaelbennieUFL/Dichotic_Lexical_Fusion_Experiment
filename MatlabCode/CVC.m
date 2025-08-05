@@ -313,7 +313,9 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
                 100*T.IH/max(T.N,1), 100*T.EH/max(T.N,1), 100*T.AE/max(T.N,1));
     end
 
+
     percentScore = 100*totOKboth / totalTrials;   % compute BEFORE clearing
+
 
     fclose('all');
     close all;
