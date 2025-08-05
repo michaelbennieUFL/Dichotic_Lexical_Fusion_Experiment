@@ -21,7 +21,7 @@ if nargin < 4, feedback = 'y';       end
 if nargin < 5, audflag  = 0;         end
 
 fsPlayback          = 44100;         % fixed playback sr
-padSamples          = 2000;          % onset/offset padding
+padSamples          = 20;          % onset/offset padding
 playScaleLeft       = 10^(-31/20);   % attenuations for Babyface Pro
 playScaleBinaural   = 10^(-32.5/20);
 
@@ -217,8 +217,10 @@ for trialIdx = 1:howmany
     bcontrol(guiHandle,6,buttonv6,0,'red',28);
 
     buttonv6(9).name = sprintf('Playing trial %d of %d...',trialIdx,howmany);
-    bcontrol(guiHandle,1,buttonv6,9,'w',20); pause(0.7);
-    sound(stereoBuffer,fsPlayback); pause(0.3);
+    bcontrol(guiHandle,6,buttonv6,0,'w', 30);
+    bcontrol(guiHandle,1,buttonv6,9,'w',20);
+    sound(stereoBuffer,fsPlayback); pause(1.7);
+    bcontrol(guiHandle,6,buttonv6,0,'red', 30);
 
     buttonv6(9).name = 'Which word/individual vowel did you hear?';
     bcontrol(guiHandle,1,buttonv6,9,'w',20);
@@ -260,7 +262,7 @@ for trialIdx = 1:howmany
         bcontrol(guiHandle,1,buttonv6,correctVowelIndex,'blue',40); pause(1);
         bcontrol(guiHandle,1,buttonv6,correctVowelIndex,'red', 30); pause(1);
     else
-        pause(0.5);
+        pause(0.1);
     end
 end
 
