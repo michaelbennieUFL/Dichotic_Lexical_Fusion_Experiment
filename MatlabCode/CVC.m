@@ -54,16 +54,16 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
 
     pairList  = generate_CVC_dichotic_pairs( ...
                     stimRoot, subjID, initials, finals, vMap, f0Names, ...
-                    monoPairCount, {'AE','IH'});       % returns Nx2 cell array
+                    monoPairCount,BinauralPairCount, {'AE','IH'});       % returns Nx2 cell array
 
 
     totalTrials = BinauralPairCount + monoPairCount;
 
-        if totalTrials > size(pairList,1)
-            error('Requested %d trials but only %d pairs exist. Reduce the counts.',...
-                  totalTrials, size(pairList,1));
-        end
-        pairList = pairList(1:totalTrials ,:);
+    if totalTrials > size(pairList,1)
+        error('Requested %d trials but only %d pairs exist. Reduce the counts.',...
+              totalTrials, size(pairList,1));
+    end
+    pairList = pairList(1:totalTrials ,:);
 
 
 
