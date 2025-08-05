@@ -1,12 +1,12 @@
-function percentScore = CVC(subjID, howmany, audflag, catchflag)
+function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     % CVC  Dichotic / diotic concurrent-vowel identification (up to 3 answers).
     %
-    %   percentScore = CVC(subjID, howmany, audflag, catchflag)
+    %   percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     %
     %   • Two independent audio streams (left / right)
     %   • Participant may pick 1-to-3 buttons (+ two replays max)
     %   • Results saved to   <subjID>_CVC_0.txt                (numeric)
-    %                         <subjID>_CVC_human_readable_0.txt
+    %                         <subjID>_CVC_human_readable_0.tsv
     %   • Console prints every trial + end-of-run summaries
     % -------------------------------------------------------------------------
     %                 *****  USER-EDITABLE CONSTANTS  *****
@@ -20,8 +20,14 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
     vowelCodeMap   = containers.Map({'IH','EH','AE'},{1,2,3});
     singleLetter   = containers.Map({'IH','EH','AE'},{'i','e','a'});
     f0Label = containers.Map({'low_f0','high_f0'}, {1,2});
-    consonantList = {'d','g','l','f','th','jh'};
+    consonantList = {'d','g','l','f','th','jh','p','sh','t'};
     consonantID   = 1:numel(consonantList);
+    
+    
+    % -----------------------------------------------------
+    if nargin<4, monoPairCount=22; end
+    if nargin<3, audflag  =0; end
+    if nargin<2, BinauralPairCount  =66+monoPairCount; end %what???????? 22*0
 
     % ------------------------------------------------------------------------
     %  GUI label overrides for specific CVC triplets
@@ -41,28 +47,25 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
     stimRoot = '/SoundFiles/CVC2025/Dichotic_Lexical_Fusion_Experiment/actual_stimuli';
 
     initials = {'D','G','L'};
-    finals   = {'D','F','TH','JH','G'};
+    finals   = {'D','F','TH','JH','G','P','SH','T'};
     vMap     = containers.Map({'a','e','i'},{'AE','EH','IH'});
     f0Names  = {'high_f0','low_f0'};
 
-    monoPairs = round(howmany*0.1);          % e.g. 10 % identical L/R
+
     pairList  = generate_CVC_dichotic_pairs( ...
                     stimRoot, subjID, initials, finals, vMap, f0Names, ...
-                    monoPairs, {'AE','IH'});       % returns Nx2 cell array
-
-    if howmany > size(pairList,1)
-        error('Requested %d trials but only %d pairs exist. Reduce *howmany*.',...
-              howmany, size(pairList,1));
-    end
-    pairList = pairList(1:howmany,:);        % crop / random-order preserved
+                    monoPairCount, {'AE','IH'});       % returns Nx2 cell array
 
 
+    totalTrials = BinauralPairCount + monoPairCount;
+
+        if totalTrials > size(pairList,1)
+            error('Requested %d trials but only %d pairs exist. Reduce the counts.',...
+                  totalTrials, size(pairList,1));
+        end
+        pairList = pairList(1:totalTrials ,:);
 
 
-    % -----------------------------------------------------
-    if nargin<4, catchflag=0; end
-    if nargin<3, audflag  =0; end
-    if nargin<2, howmany  =84+(24*catchflag); end
 
     %% =====  RESULTS FILES  ==================================================
     dataDir = fullfile('/Experiments/Data',subjID); if ~exist(dataDir,'dir'), mkdir(dataDir); end
@@ -133,7 +136,7 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
     statsCat = struct('lowlow',[],'highhigh',[],'alt',[]); % per-F0 condition
     tally    = struct;                       % per (C1,C2)
 
-    for trial = 1:howmany
+    for trial = 1:totalTrials
         L = pairList{trial,1};    % {C1,C2,V,f0,path}
         R = pairList{trial,2};
 
@@ -160,7 +163,7 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
 
         %% ---- play  (with optional HL correction) --------------------------
         stereo = pad_and_scale(wavL,wavR,audflag,audiogram,playScale,padSamples);
-        buttonv6(9).name=sprintf('Playing trial %d of %d...',trial,howmany);
+        buttonv6(9).name=sprintf('Playing trial %d of %d...',trial,totalTrials);
         bcontrol(h,1,buttonv6,9,'w',20); pause(.7);
         a=audioplayer(stereo,fsPlayback,bits); playblocking(a); pause(.3);
 
@@ -252,7 +255,7 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
         tally.(keyCC)=tall;
 
         %% ---- write files ---------------------------------------------------
-        fmtInt = '%d %d %d %d %d %d %d %d %d %d %d %d %d %d %.4f\n';
+        fmtInt = '%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %.4f\n';
         fmtHum = ['%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t' ...   % up to Ans3V
                   '%d\t%d\t%d\t' ...                               % Ans1C-3C
                   '%s\t%s\t%s\t' ...                               % Ans1-3 labels
@@ -268,13 +271,13 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
 
         fprintf(fidHum,fmtHum, ...
                 trial, C1,C2,V1,V2,f01,f02, ...
-                pick(-1,ansVowel(1),vowLabels), ...
-                pick(-1,ansVowel(2),vowLabels), ...
-                pick(-1,ansVowel(3),vowLabels), ...
+                pick('NaN', ansVowel(1), vowLabels), ...
+                pick('NaN', ansVowel(2), vowLabels), ...
+                pick('NaN', ansVowel(3), vowLabels), ...
                 ansCons(1),ansCons(2),ansCons(3), ...
-                pickStr(-1,answers(1),buttonv6), ...
-                pickStr(-1,answers(2),buttonv6), ...
-                pickStr(-1,answers(3),buttonv6), ...
+                pickStr('NaN', answers(1), buttonv6), ...
+                pickStr('NaN', answers(2), buttonv6), ...
+                pickStr('NaN', answers(3), buttonv6), ...
                 oneType,bothOK,RT, ...
                 ear,audLeftStr,audRightStr);
 
@@ -288,9 +291,9 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
 
     %% =====  SUMMARY  =======================================================
     fprintf('\n=== OVERALL SUMMARY =========================================\n');
-    fprintf('Avg ≥1 correct:  %5.2f %%\n', 100*totOK1/howmany);
-    fprintf('Both correct:    %5.2f %%\n', 100*totOKboth/howmany);
-    fprintf('Mean RT:         %7.4f  s\n', rtTot/howmany);
+    fprintf('Avg ≥1 correct:  %5.2f %%\n', 100*totOK1/totalTrials);
+    fprintf('Both correct:    %5.2f %%\n', 100*totOKboth/totalTrials);
+    fprintf('Mean RT:         %7.4f  s\n', rtTot/totalTrials);
     fprintf('Total RT:        %7.4f  s\n', rtTot);
 
     cats={'lowlow','highhigh','alt'};
@@ -310,7 +313,7 @@ function percentScore = CVC(subjID, howmany, audflag, catchflag)
                 100*T.IH/max(T.N,1), 100*T.EH/max(T.N,1), 100*T.AE/max(T.N,1));
     end
 
-    percentScore = 100*totOKboth / howmany;   % compute BEFORE clearing
+    percentScore = 100*totOKboth / totalTrials;   % compute BEFORE clearing
 
     fclose('all');
     close all;
