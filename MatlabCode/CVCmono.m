@@ -117,22 +117,22 @@ end
 
 %% -------------- Prepare both results files: int + human ----------------
 intFile   = fileExistCheck(dir,[subjID '_CVCmono_0.txt']);
-humanFile = fileExistCheck(dir,[subjID '_CVCmono_human_readable_0.txt']);
+humanFile = fileExistCheck(dir,[subjID '_CVCmono_human_readable_0.tsv']);
 
 fidInt = fopen(intFile,'wt');
 fidHum = fopen(humanFile,'wt');
 
 % ----- Common header lines: Ear & Audiogram ----------------------------
 fprintf(fidInt ,'Ear: %s\n', ear);
-fprintf(fidHum ,'Ear: %s\n', ear);
 if audflag
     fprintf(fidInt ,'Audiogram left  : [%s]\n', sprintf('%.0f ', audiogram(1,:)));
     fprintf(fidInt ,'Audiogram right : [%s]\n', sprintf('%.0f ', audiogram(2,:)));
-    fprintf(fidHum ,'Audiogram left  : [%s]\n', sprintf('%.0f ', audiogram(1,:)));
-    fprintf(fidHum ,'Audiogram right : [%s]\n', sprintf('%.0f ', audiogram(2,:)));
+    audLeftStr  = strjoin(string(audiogram(1 ,:)), ',');   % e.g. 10,15,20,…
+    audRightStr = strjoin(string(audiogram(2 ,:)), ',');
 else
     fprintf(fidInt ,'Audiogram left  : NA\nAudiogram right : NA\n');
-    fprintf(fidHum ,'Audiogram left  : NA\nAudiogram right : NA\n');
+    audLeftStr  = 'NA';
+    audRightStr = 'NA';
 end
 
 % ----- Key header for integer file -------------------------------------
@@ -142,10 +142,10 @@ fprintf(fidInt,'\n# Vowel_ID      : ');
 for k=1:numel(vowelList),     fprintf(fidInt,'%s=%d ',vowelList{k},vowelID(k));         end
 fprintf(fidInt,'\n# F0_ID         : ');
 for k=1:numel(f0List),        fprintf(fidInt,'%s=%d ',f0List{k},f0ID(k));               end
-fprintf(fidInt,'\n# Columns       : Consonant_1_ID Consonant_2_ID Vowel_ID F0_ID Heard_Consonant Answer_vowel Correct Time_elapsed\n');
+fprintf(fidInt,'# Columns       : Trial Consonant_1_ID Consonant_2_ID Vowel_ID F0_ID Heard_Consonant Answer_vowel Correct Time_elapsed\n');
 
 % ----- Header for human-readable file -----------------------------------
-fprintf(fidHum,'C1 C2 Vowel F0 Answer Answer_vowel Heard_Consonant Heard_correct_vowel Time_elapsed\n');
+fprintf(fidHum,'Trial\tC1\tC2\tVowel\tF0\tAnswer\tAnswer_vowel\tHeard_Consonant\tHeard_correct_vowel\tTime_elapsed\tEar\tAudiogram_Left\tAudiogram_Right\n');
 
 fprintf('Results saved to\n  %s\n  %s\n', fullfile(dataPath,intFile), fullfile(dataPath,humanFile));
 
@@ -249,13 +249,15 @@ for trialIdx = 1:howmany
     answerVowelID  = buttonToVowel(answer);     % 1–3
 
     % ----- Integer file line -------------------------------------------
-    fprintf(fidInt,'%d %d %d %d %d %d %d %.4f\n',...
-        c1ID,c2ID,vowID,f0IDn,heardConsonant,answerVowelID,correct,respTime);
+    fprintf(fidInt,'%d %d %d %d %d %d %d %d %.4f\n',...
+            trialIdx, c1ID,c2ID,vowID,f0IDn,heardConsonant,answerVowelID,correct,respTime);
+
 
     % ----- Human-readable file line ------------------------------------
-    fprintf(fidHum,'%s %s %s %s %s %s %d %d %.4f\n',...
-        C1,C2,V,f0Lbl,buttonv6(answer).name,vowelList{answerVowelID},...
-        heardConsonant,correct,respTime);
+    fprintf(fidHum,'%d\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%.4f\t%s\t%s\t%s\n',...
+            trialIdx,C1,C2,V,f0Lbl,buttonv6(answer).name,vowelList{answerVowelID},...
+            heardConsonant,correct,respTime,ear,audLeftStr,audRightStr);
+
 
     % ----- Feedback -----------------------------------------------------
     if feedback=='y'
