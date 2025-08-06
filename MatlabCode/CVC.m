@@ -262,3 +262,54 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     fclose('all'); close all;
     clearvars -except percentScore
 end
+
+
+function stereo = pad_and_scale(yL,yR,audflag,audiogram,scale_l,scale_r,pad)
+    % 1 · force column vectors
+    yL = yL(:); yR = yR(:);
+
+    % 2 · match durations
+    N  = max(numel(yL),numel(yR));
+    if numel(yL)<N, yL(end+1:N)=0; end
+    if numel(yR)<N, yR(end+1:N)=0; end
+
+    % 3 · HL compensation (only if audiogram provided)
+    if audflag && ~isempty(audiogram)
+        [yL,~,~] = ampstim(yL,44100,audiogram(1,:));   % left ear
+        [yR,~,~] = ampstim(yR,44100,audiogram(2,:));   % right ear
+        % CV divides by 10^(28/20) afterwards — keep it for consistency
+        yL = yL  / 10^(28/20);
+        yR = yR  / 10^(28/20) ;
+    end
+
+    % 4 · leading / trailing zeros and global scale
+    stereo = [zeros(pad,2); [yL *scale_l, yR *scale_r]; zeros(pad,2)];
+end
+
+
+
+function flash(h,idx,msg)
+    global buttonv6
+
+    buttonv6(idx).name = msg; % update label
+    bcontrol(h,1,buttonv6,idx,'w',20);  % works for every button (1–9)
+    pause(0.6);
+end
+
+
+
+function cat = pickCategory(f01,f02)
+    if  f01==1 && f02==1,        cat='lowlow';
+    elseif f01==2 && f02==2,     cat='highhigh';
+    else,                        cat='alt'; end
+end
+
+function out = pick(def,val,arr)
+    if nargin < 1 || isempty(def), def = 'NaN'; end
+    if val==-1, out=def; else, out=arr{val}; end
+end
+
+function out = pickStr(def,val,bv)
+    if nargin < 1 || isempty(def), def = 'NaN'; end
+    if val==-1, out=def; else, out=bv(val).name; end
+end
