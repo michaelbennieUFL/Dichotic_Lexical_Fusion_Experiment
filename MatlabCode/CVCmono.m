@@ -22,8 +22,9 @@ if nargin < 5, audflag  = 0;         end
 
 fsPlayback          = 44100;         % fixed playback sr
 padSamples          = 20;          % onset/offset padding
-playScaleLeft       = 10^(-31/20);   % attenuations for Babyface Pro
-playScaleBinaural   = 10^(-32.5/20);
+playScaleLeft       = 10^(-40/20);   % attenuations for Babyface Pro
+playScaleRight       = 10^(-42/20);   % attenuations for Babyface Pro
+playScaleBinaural   = 10^(-40/20);
 
 %% ----------- LOOKUP-TABLES: label ↔ integer mapping --------------------
 consonantList = {'d','g','l','f','th','jh'};   % update if you add tokens
@@ -191,13 +192,9 @@ for trialIdx = 1:howmany
 
     [wavData, fsFile] = audioread(wavFile);
     if fsFile~=fsPlayback, error('File %s has sr %d, expected %d.',wavFile,fsFile,fsPlayback); end
-    paddedMono = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
+        paddedMono = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
+        stereoBuffer=[paddedMono*playScaleLeft,paddedMono*playScaleRight];
 
-    switch earIdx
-        case 1, stereoBuffer=[paddedMono,zeros(size(paddedMono))]*playScaleLeft;
-        case 2, stereoBuffer=[zeros(size(paddedMono)),paddedMono]*playScaleLeft;
-        otherwise, stereoBuffer=[paddedMono,paddedMono]*playScaleBinaural;
-    end
 
     % --- Update GUI buttons for this trial ---------------------------------
     for iV = 1:numel(vowLabels)

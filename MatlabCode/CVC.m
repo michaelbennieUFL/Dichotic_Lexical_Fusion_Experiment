@@ -14,6 +14,8 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     bits           = 24;
     padSamples     = 2000;
     playScale      = 10^(-31/20);        % Babyface Pro
+    playScaleLeft       = 10^(-40/20);   % attenuations for Babyface Pro
+    playScaleRight       = 10^(-42/20);   % attenuations for Babyface Pro
     maxReplays     = 2;                  % per trial
     buttonToVowel  = [1 2 3 1 2 3 1 2 3];% mapping GUI idx → vowel idx
     vowLabels      = {'IH','EH','AE'};   % order on GUI bottom row
@@ -25,7 +27,7 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     
     
     % -----------------------------------------------------
-    if nargin<4, monoPairCount=22; end
+    if nargin<4, monoPairCount=33; end
     if nargin<3, audflag  =0; end
     if nargin<2, BinauralPairCount  =66+monoPairCount; end %what???????? 22*0
 
@@ -162,10 +164,10 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
         bcontrol(h,6,buttonv6,0,'red',28);
 
         %% ---- play  (with optional HL correction) --------------------------
-        stereo = pad_and_scale(wavL,wavR,audflag,audiogram,playScale,padSamples);
+        stereo = pad_and_scale(wavL,wavR,audflag,audiogram,playScaleLeft,playScaleRight,padSamples);
         buttonv6(9).name=sprintf('Playing trial %d of %d...',trial,totalTrials);
-        bcontrol(h,1,buttonv6,9,'w',20); pause(.7);
-        a=audioplayer(stereo,fsPlayback,bits); playblocking(a); pause(.3);
+        bcontrol(h,1,buttonv6,9,'w',20); 
+        a=audioplayer(stereo,fsPlayback,bits); playblocking(a);
 
         %% ---- collect up-to-3 answers  -------------------------------------
         buttonv6(9).name="Choose 1-3 sounds you heard ('Repeat' to replay)"; bcontrol(h,1,buttonv6,9,'w',20);
@@ -177,7 +179,7 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
                     playblocking(a); replayCnt = replayCnt + 1;
                 else                            % -------- inline flash -------------
                     buttonv6(9).name = 'Replay limit reached';
-                    bcontrol(h,1,buttonv6,9,'w',20); pause(.6);
+                    bcontrol(h,1,buttonv6,9,'w',20); pause(.4);
                 end
             elseif idx <= 6               % a vowel (top or bottom row)
                 if ~vowelChosen(idx)
@@ -187,7 +189,7 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
                         bcontrol(h,1,buttonv6,idx,'blue',30);
                     else                               % -------- inline flash --------
                         buttonv6(9).name = 'Max 3 choices';
-                        bcontrol(h,1,buttonv6,9,'w',20); pause(.6);
+                        bcontrol(h,1,buttonv6,9,'w',20); pause(.4);
                     end
                 else                                    % toggle off
                     vowelChosen(idx) = false;
@@ -199,7 +201,7 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
                         break;
                     else                            % -------- inline flash -------------
                         buttonv6(9).name = 'Pick 1-3';
-                        bcontrol(h,1,buttonv6,9,'w',20); pause(.6);
+                        bcontrol(h,1,buttonv6,9,'w',20); pause(.4);
                     end
             end
         end
@@ -323,7 +325,7 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     clearvars -except percentScore            % keep only the output
 end   % =======================  CVC  =======================
 
-function stereo = pad_and_scale(yL,yR,audflag,audiogram,scale,pad)
+function stereo = pad_and_scale(yL,yR,audflag,audiogram,scale_l,scale_r,pad)
     % 1 · force column vectors
     yL = yL(:); yR = yR(:);
 
@@ -337,12 +339,12 @@ function stereo = pad_and_scale(yL,yR,audflag,audiogram,scale,pad)
         [yL,~,~] = ampstim(yL,44100,audiogram(1,:));   % left ear
         [yR,~,~] = ampstim(yR,44100,audiogram(2,:));   % right ear
         % CV divides by 10^(28/20) afterwards — keep it for consistency
-        yL = yL / 10^(28/20);
-        yR = yR / 10^(28/20);
+        yL = yL  / 10^(28/20);
+        yR = yR  / 10^(28/20) ;
     end
 
     % 4 · leading / trailing zeros and global scale
-    stereo = [zeros(pad,2); [yL yR]; zeros(pad,2)] * scale;
+    stereo = [zeros(pad,2); [yL *scale_l, yR *scale_r]; zeros(pad,2)];
 end
 
 
