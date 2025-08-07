@@ -190,7 +190,22 @@ for trialIdx = 1:howmany
     f0Lbl= thisQuad{4};
     wavFile = thisQuad{5};
 
+    % ---------------- load & trim the token ----------------
     [wavData, fsFile] = audioread(wavFile);
+    if fsFile ~= fsPlayback
+        error('File %s has sr %d, expected %d.', wavFile, fsFile, fsPlayback);
+    end
+
+    trimSec     = 0.5;                          % seconds to cut at each edge
+    trimSamples = round(trimSec * fsPlayback);  % 0.5 s → 22 050 samples
+
+    if size(wavData,1) <= 2*trimSamples
+        error('Stimulus %s is too short to trim 0.5 s at both ends.', wavFile);
+    end
+
+    wavData = wavData(trimSamples+1 : end-trimSamples);   % TRIM
+
+
     if fsFile~=fsPlayback, error('File %s has sr %d, expected %d.',wavFile,fsFile,fsPlayback); end
         paddedMono = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
         stereoBuffer=[paddedMono*playScaleLeft,paddedMono*playScaleRight];
