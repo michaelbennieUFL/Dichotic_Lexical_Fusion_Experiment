@@ -58,6 +58,11 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     fidInt  = fopen(intFile ,'wt');
     fidHum  = fopen(humanFile,'wt');
 
+    % ---------- tell the user where the files are ---------------------------
+    fprintf('\n>> Output files for this run (%d):\n   %s\n   %s\n\n', ...
+            runIdx, intFile, humanFile);
+
+
     ear = 'B';
     audiogram = [];
     if audflag
