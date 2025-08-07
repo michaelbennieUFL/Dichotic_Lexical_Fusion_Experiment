@@ -265,25 +265,35 @@ end
 
 
 function stereo = pad_and_scale(yL,yR,audflag,audiogram,scale_l,scale_r,pad)
-    % 1 · force column vectors
-    yL = yL(:); yR = yR(:);
+    fs = 44100;  % Assuming sampling rate is 44.1 kHz
 
-    % 2 · match durations
+    % 1 · force column vectors
+    yL = yL(:);
+    yR = yR(:);
+
+    % 2 · remove first 0.5 s and last 0.5 s
+    trimStart = round(0.5 * fs);   % 0.5 seconds
+    trimEnd   = round(0.5 * fs);   % 0.5 seconds
+
+    % Trim safely (ensure signal is long enough)
+    yL = yL(max(1,trimStart+1):max(end-trimEnd,trimStart+1));
+    yR = yR(max(1,trimStart+1):max(end-trimEnd,trimStart+1));
+
+    % 3 · match durations
     N  = max(numel(yL),numel(yR));
     if numel(yL)<N, yL(end+1:N)=0; end
     if numel(yR)<N, yR(end+1:N)=0; end
 
-    % 3 · HL compensation (only if audiogram provided)
+    % 4 · HL compensation (only if audiogram provided)
     if audflag && ~isempty(audiogram)
-        [yL,~,~] = ampstim(yL,44100,audiogram(1,:));   % left ear
-        [yR,~,~] = ampstim(yR,44100,audiogram(2,:));   % right ear
-        % CV divides by 10^(28/20) afterwards — keep it for consistency
+        [yL,~,~] = ampstim(yL,fs,audiogram(1,:));   % left ear
+        [yR,~,~] = ampstim(yR,fs,audiogram(2,:));   % right ear
         yL = yL  / 10^(28/20);
-        yR = yR  / 10^(28/20) ;
+        yR = yR  / 10^(28/20);
     end
 
-    % 4 · leading / trailing zeros and global scale
-    stereo = [zeros(pad,2); [yL *scale_l, yR *scale_r]; zeros(pad,2)];
+    % 5 · leading / trailing zeros and global scale
+    stereo = [zeros(pad,2); [yL * scale_l, yR * scale_r]; zeros(pad,2)];
 end
 
 
