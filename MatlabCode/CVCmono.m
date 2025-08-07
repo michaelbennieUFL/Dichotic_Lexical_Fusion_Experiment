@@ -13,6 +13,7 @@ function percentScore = CVCmono(subjID, ear, howmany, feedback, audflag)
 %
 %   percentScore : proportion correct × 100 for this run
 %   --------------------------------------------------------------------
+% Michael Bennie : 8/7/25 : reduced the length and fixed file recognition error
 
 %% ------------------------ CONSTANTS & PARAMETERS ------------------------
 maxTrials           = 72;
