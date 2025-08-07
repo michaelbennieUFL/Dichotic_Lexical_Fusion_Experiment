@@ -27,7 +27,7 @@ playScaleRight       = 10^(-42/20);   % attenuations for Babyface Pro
 playScaleBinaural   = 10^(-40/20);
 
 %% ----------- LOOKUP-TABLES: label ↔ integer mapping --------------------
-consonantList = {'d','g','l','f','th','jh'};   % update if you add tokens
+consonantList = {'d','g','l','f','th','jh','p','sh','t'};
 consonantID   = 1:numel(consonantList);
 consonantMap  = containers.Map(consonantList, consonantID);
 
@@ -74,7 +74,7 @@ vowelCodeMap = containers.Map({'IH','EH','AE'}, {'i','e','a'});
 
 %% --------------------- STIMULUS-LIST GENERATION ------------------------
 initials   = {'D','G','L'};
-finals     = {'D','F','TH','JH','G'};
+finals   = {'D','F','TH','JH','G','P','SH','T'};
 vowelMap   = containers.Map({'a','e','i'},{'AE','EH','IH'});
 vowLabels  = {'IH','EH','AE'};
 f0Names    = {'high_f0','low_f0'};
