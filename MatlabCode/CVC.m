@@ -1,7 +1,6 @@
 function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     % CVC  Dichotic / diotic concurrent-vowel identification (up to 3 answers).
     % Scores & console summaries are computed for dichotic (different-vowel) trials only.
-    % Michael Bennie : 8/7/25 : reduced the length and fixed file recognition error
 
     % ===== USER CONSTANTS =====
     fsPlayback     = 44100;
@@ -90,7 +89,7 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
 
     % ===== GUI SETUP =====
     global shp; close all;
-    status = status_bar; load C:/Development/Matlab/ark1.mat
+    statusBar = status_bar; load C:/Development/Matlab/ark1.mat
     h = ark1v6;
     defaultTop  = {'big','beg','bag'};
     for k=1:3, buttonv6(k).name=defaultTop{k}; buttonv6(k+3).name=vowLabels{k}; end
@@ -110,6 +109,7 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
 
     % ===== MAIN LOOP =====
     for trial = 1:totalTrials
+        set(statusBar,'String',num2str(trial));
         L = pairList{trial,1}; R = pairList{trial,2};
         C1 = L{1}; C2 = L{2};
         V1 = L{3}; V2 = R{3};
