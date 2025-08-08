@@ -38,7 +38,8 @@ f0list = f0_names(:)';
 vlist  = upper(possibleDichoticVowels(:)');
 
 %% --------- Generate Mono Pairs (Identical or Same Vowel/Diff F0) ---------
-monoCandidates = {};
+diffF0Pairs = {};
+identicalPairs = {};
 
 for i = 1:size(allQuads,1)
     C1 = allQuads{i,1};
@@ -46,27 +47,39 @@ for i = 1:size(allQuads,1)
     V  = allQuads{i,3};
     f0 = allQuads{i,4};
 
-    % Identical stimuli (same file)
-    monoCandidates(end+1,:) = {allQuads(i,:), allQuads(i,:)};
-
     % Same vowel, different f0
     for f0b = f0list
         if strcmp(f0b{1},f0), continue; end
         k2 = key(C1,C2,V,f0b{1});
         if quadMap.isKey(k2)
             q2 = {C1,C2,V,f0b{1},quadMap(k2)};
-            monoCandidates(end+1,:) = {allQuads(i,:), q2};
+            diffF0Pairs(end+1,:) = {allQuads(i,:), q2};
         end
     end
+
+    % Identical stimuli (same file)
+    identicalPairs(end+1,:) = {allQuads(i,:), allQuads(i,:)};
 end
 
-% Check if enough mono candidates are available
-if monoCount > size(monoCandidates,1)
-    error('Requested %d mono pairs, only %d available.', ...
-        monoCount, size(monoCandidates,1));
+% Select mono pairs
+requiredDiffF0 = min(33, monoCount);
+if size(diffF0Pairs,1) < requiredDiffF0
+    error('Not enough "same vowel, different f0" mono pairs to satisfy first %d slots.', requiredDiffF0);
 end
-pickMono = randperm(size(monoCandidates,1), monoCount);
-monoPairs = monoCandidates(pickMono,:);
+
+% Randomly select requiredDiffF0 from diffF0Pairs
+pickDiffF0 = randperm(size(diffF0Pairs,1), requiredDiffF0);
+monoPairs = diffF0Pairs(pickDiffF0,:);
+
+% If more needed, fill in with identicalPairs
+remainingMono = monoCount - requiredDiffF0;
+if remainingMono > 0
+    if size(identicalPairs,1) < remainingMono
+        error('Not enough identical mono pairs to fill the remaining %d slots.', remainingMono);
+    end
+    pickIdentical = randperm(size(identicalPairs,1), remainingMono);
+    monoPairs = [monoPairs; identicalPairs(pickIdentical,:)];
+end
 
 %% --------- Generate Dichotic Pairs (Different vowels only) ---------
 dichoticCandidates = {};
