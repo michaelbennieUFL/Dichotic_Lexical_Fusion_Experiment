@@ -11,6 +11,11 @@ function pairs = generate_CVC_dichotic_pairs(root, seed, ...
 %
 % RETURNS Nx2 cell array; each entry: {C1,C2,V,f0,path}
 
+
+desired_f0_1 = 'low_f0';
+other_f0s = setdiff(f0list, {desired_f0_1});  % e.g., {'high_f0'} if you have 2 F0s
+
+
 if nargin < 8 || isempty(dichoticCount)
     dichoticCount = inf;
 end
@@ -48,7 +53,7 @@ for i = 1:size(allQuads,1)
     f0 = allQuads{i,4};
 
     % Same vowel, different f0
-    for f0b = f0list
+    for f0b = other_f0s
         if strcmp(f0b{1},f0), continue; end
         k2 = key(C1,C2,V,f0b{1});
         if quadMap.isKey(k2)
@@ -106,7 +111,7 @@ for i = 1:size(allQuads,1)
     % Different vowel, different f0
     for Vb = vlist
         if strcmp(Vb{1},V), continue; end
-        for f0b = f0list
+        for f0b = other_f0s
             if strcmp(f0b{1},f0), continue; end
             k2 = key(C1,C2,Vb{1},f0b{1});
             if quadMap.isKey(k2)

@@ -2,6 +2,7 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     % CVC  Dichotic / diotic concurrent-vowel identification (up to 3 answers).
     % Scores & console summaries are computed for dichotic (different-vowel) trials only.
 % Michael Bennie : 8/7/25 : reduced the length and fixed file recognition error
+% Michael Bennie : 8/9/25 : fixed samplining error
 
     % ===== USER CONSTANTS =====
     fsPlayback     = 44100;
