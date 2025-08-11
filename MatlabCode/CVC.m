@@ -2,7 +2,6 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     % CVC  Dichotic / diotic concurrent-vowel identification (up to 3 answers).
     % Scores & console summaries are computed for dichotic (different-vowel) trials only.
 % Michael Bennie : 8/7/25 : reduced the length and fixed file recognition error
-% Michael Bennie : 8/9/25 : fixed samplining error
 
     % ===== USER CONSTANTS =====
     fsPlayback     = 44100;
@@ -61,8 +60,8 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
     fidHum  = fopen(humanFile,'wt');
 
     % ---------- tell the user where the files are ---------------------------
-    fprintf('\n>> Output files for this run (%d):\n   %s\n   %s\n\n', ...
-            runIdx, intFile, humanFile);
+    fprintf('\n>> Output files for this run:\n   %s\n   %s\n\n', ...
+            intFile, humanFile);
 
 
     ear = 'B';

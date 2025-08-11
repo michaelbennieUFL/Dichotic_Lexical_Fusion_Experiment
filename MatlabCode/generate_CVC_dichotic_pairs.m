@@ -10,10 +10,8 @@ function pairs = generate_CVC_dichotic_pairs(root, seed, ...
 % dichoticCount:  Number of dichotic pairs (different vowels only)
 %
 % RETURNS Nx2 cell array; each entry: {C1,C2,V,f0,path}
+% Michael Bennie 8/9 Fixed sampling
 
-
-desired_f0_1 = 'low_f0';
-other_f0s = setdiff(f0list, {desired_f0_1});  % e.g., {'high_f0'} if you have 2 F0s
 
 
 if nargin < 8 || isempty(dichoticCount)
@@ -42,6 +40,10 @@ rng(seed,'twister');
 f0list = f0_names(:)';
 vlist  = upper(possibleDichoticVowels(:)');
 
+desired_f0_1 = 'low_f0';
+other_f0s = setdiff(f0list, {desired_f0_1});  % e.g., {'high_f0'} if you have 2 F0s
+
+
 %% --------- Generate Mono Pairs (Identical or Same Vowel/Diff F0) ---------
 diffF0Pairs = {};
 identicalPairs = {};
@@ -65,6 +67,9 @@ for i = 1:size(allQuads,1)
     % Identical stimuli (same file)
     identicalPairs(end+1,:) = {allQuads(i,:), allQuads(i,:)};
 end
+
+fprintf('[DEBGU] different F0/ same vowel pairs: %d\n',size(diffF0Pairs,1));
+fprintf('[DEBGU] same F0/ same vowel pairs: %d\n',size(identicalPairs,1));
 
 % Select mono pairs
 requiredDiffF0 = min(33, monoCount);
@@ -107,7 +112,7 @@ for i = 1:size(allQuads,1)
             dichoticCandidates(end+1,:) = {allQuads(i,:), q2};
         end
     end
-
+    
     % Different vowel, different f0
     for Vb = vlist
         if strcmp(Vb{1},V), continue; end
@@ -120,7 +125,9 @@ for i = 1:size(allQuads,1)
             end
         end
     end
+    
 end
+fprintf('[DEBGU] dichotic vowel pairs: %d\n',size(dichoticCandidates,1));
 
 % Check if enough dichotic candidates are available
 if isfinite(dichoticCount)
