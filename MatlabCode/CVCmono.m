@@ -114,6 +114,8 @@ if audflag
     if fidAudiogram == -1, error('Audiogram.txt not found for %s.', subjID); end
     unused_var = fscanf(fidAudiogram, '%i', [8 1])';           % frequencies (unused)
     audiogram  = fscanf(fidAudiogram, '%f', [8 2])';  % rows: L  R
+    fprintf('Audiogram left  : [%s]\n', sprintf('%.0f ', audiogram(1,:)));
+    fprintf('Audiogram right : [%s]\n', sprintf('%.0f ', audiogram(2,:)));
     fclose(fidAudiogram);
 end
 
@@ -206,10 +208,54 @@ for trialIdx = 1:howmany
 
     wavData = wavData(trimSamples+1 : end-trimSamples);   % TRIM
 
+    paddedMono = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
+    stereoBuffer=[paddedMono*playScaleLeft,paddedMono*playScaleRight];
 
-    if fsFile~=fsPlayback, error('File %s has sr %d, expected %d.',wavFile,fsFile,fsPlayback); end
-        paddedMono = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
-        stereoBuffer=[paddedMono*playScaleLeft,paddedMono*playScaleRight];
+    if earIdx==1 %left ear
+        if audflag==1
+            [target rms_y db_y] = ampstim(paddedMono, fsPlayback, audiogram(1,:));
+            target=target/(10^(28/20));
+            if max(abs(target))>1 
+                disp('WARNING!!!  Wave file will exceed allowable values of +-1.  Please use audiogram with lower values!  ');
+            end
+            
+        elseif audflag==0
+            target=paddedMono;
+        end
+        targetR=zeros(length(target),1);
+        targetL=target;
+    elseif earIdx==2    %right ear
+        if audflag==1
+            [target rms_y db_y] = ampstim(paddedMono, fsPlayback, audiogram(2,:));
+            target=target/(10^(28/20));
+            if max(abs(target))>1 
+                disp('WARNING!!!  Wave file will exceed allowable values of +-1.  Please use audiogram with lower values!  ');
+            end
+            
+        elseif audflag==0
+            target=paddedMono;
+        end
+        targetL=zeros(length(target),1);
+        targetR=target;
+    elseif earIdx==3    %both ears
+        if audflag==1
+            [targetL rms_y db_y] = ampstim(paddedMono, fsPlayback, audiogram(1,:));
+            [targetR rms_y db_y] = ampstim(paddedMono, fsPlayback, audiogram(2,:));
+            targetL=targetL/(10^(28/20));
+            targetR=targetR/(10^(28/20));
+            if max(abs(targetL))>1 | max(abs(targetR))>1
+                disp('WARNING!!!  Wave file will exceed allowable values of +-1.  Please use audiogram with lower values!  ');
+            end
+            
+        elseif audflag==0
+            targetL=paddedMono;
+            targetR=paddedMono;
+        end
+    end
+    stereoBuffer=[targetL*playScaleLeft,targetR*playScaleRight];
+
+
+
 
 
     % --- Update GUI buttons for this trial ---------------------------------
