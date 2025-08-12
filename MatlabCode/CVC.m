@@ -74,6 +74,7 @@ function percentScore = CVC(subjID, BinauralPairCount, audflag, monoPairCount)
         fclose(fidAudiogram);
         audLeftStr  = strjoin(string(audiogram(1 ,:)), ',');
         audRightStr = strjoin(string(audiogram(2 ,:)), ',');
+        fprintf('Audiogram left  : %s\nAudiogram right : %s\n', audLeftStr, audRightStr);
     else
         audLeftStr  = 'NA'; audRightStr = 'NA';
     end
@@ -303,8 +304,17 @@ function stereo = pad_and_scale(yL,yR,audflag,audiogram,scale_l,scale_r,pad)
     if audflag && ~isempty(audiogram)
         [yL,~,~] = ampstim(yL,fs,audiogram(1,:));   % left ear
         [yR,~,~] = ampstim(yR,fs,audiogram(2,:));   % right ear
-        yL = yL  / 10^(28/20);
-        yR = yR  / 10^(28/20);
+        yL = yL  / 10^(22/20)/1.13/1.7;
+        yR = yR  / 10^(22/20)/1.13/1.7;
+    end
+
+    if max(abs(yL* scale_l))>1
+        fprintf('abs(yL):%5.5f',max(abs(yL)));
+        disp('WARNING!!!  Wave file will exceed allowable values of +-1.  Please use audiogram with lower values!  ');
+    end
+    if max(abs(yR*scale_r))>1
+        fprintf('abs(yR):%5.5f',max(abs(yR)));
+        disp('WARNING!!!  Wave file will exceed allowable values of +-1.  Please use audiogram with lower values!  ');
     end
 
     % 5 · leading / trailing zeros and global scale
