@@ -94,6 +94,10 @@ quadList   = generate_CVC_mono_stimuli_quadruplets( ...
 nStim      = size(quadList,1);
 if nStim == 0, error('No usable stimulus files found under %s', stimRoot); end
 
+
+
+
+
 rng('shuffle','twister');                    % random order for this run
 shuffleIdx = randperm(nStim);
 
@@ -114,6 +118,8 @@ if audflag
     if fidAudiogram == -1, error('Audiogram.txt not found for %s.', subjID); end
     unused_var = fscanf(fidAudiogram, '%i', [8 1])';           % frequencies (unused)
     audiogram  = fscanf(fidAudiogram, '%f', [8 2])';  % rows: L  R
+    fprintf('Audiogram left  : [%s]\n', sprintf('%.0f ', audiogram(1,:)));
+    fprintf('Audiogram right : [%s]\n', sprintf('%.0f ', audiogram(2,:)));
     fclose(fidAudiogram);
 end
 
@@ -150,6 +156,74 @@ fprintf(fidInt,'# Columns       : Trial Consonant_1_ID Consonant_2_ID Vowel_ID F
 fprintf(fidHum,'Trial\tC1\tC2\tVowel\tF0\tAnswer\tAnswer_vowel\tHeard_Consonant\tHeard_correct_vowel\tTime_elapsed\tEar\tAudiogram_Left\tAudiogram_Right\n');
 
 fprintf('Results saved to\n  %s\n  %s\n', fullfile(dataPath,intFile), fullfile(dataPath,humanFile));
+
+
+
+
+    % ---- LOOP OVER FILES: compute max AFTER ampstim + playback scales ----
+    maxVals = zeros(size(quadList,1),1);
+
+    % map ear like your runtime routing
+    earIdx = strmatch(upper(ear), ['L'; 'R'; 'B']);
+    if isempty(earIdx), error('Ear must be ''L'', ''R'', or ''B''.'); end
+
+    for i = 1:size(quadList,1)
+        wavFile = quadList{i,5};
+        [y, fs] = audioread(wavFile);
+
+        if fs ~= fsPlayback
+            error('File %s has sr %d, expected %d.', wavFile, fs, fsPlayback);
+        end
+
+        % same 0.5 s trim each edge as runtime
+        trimSec     = 0.5;
+        trimSamples = round(trimSec * fsPlayback);
+        if size(y,1) > 2*trimSamples
+            y = y(trimSamples+1 : end-trimSamples);
+        else
+            warning('File %s too short for trim, skipping trim.', wavFile);
+        end
+
+        % ---- build post-processing per ear (no zero padding, doesn't affect peak) ----
+        if earIdx==1          % LEFT
+            if audflag==1
+                [tL,~,~] = ampstim(y, fsPlayback, audiogram(1,:));
+            else
+                tL = y;
+            end
+            % apply playback scaling exactly as in CVCmono
+            L = tL * playScaleLeft;               % left channel as played
+            maxVals(i) = max(abs(L));
+
+        elseif earIdx==2      % RIGHT
+            if audflag==1
+                [tR,~,~] = ampstim(y, fsPlayback, audiogram(2,:));
+            else
+                tR = y;
+            end
+            R = tR * playScaleRight;              % right channel as played
+            maxVals(i) = max(abs(R));
+
+        elseif earIdx==3      % BOTH (binaural)
+            if audflag==1
+                [tL,~,~] = ampstim(y, fsPlayback, audiogram(1,:));
+                [tR,~,~] = ampstim(y, fsPlayback, audiogram(2,:));
+
+            else
+                tL = y;  tR = y;
+            end
+            % use the same per-channel scaling you use during playback
+            L = tL * playScaleLeft;
+            R = tR * playScaleRight;
+            % overall peak is the larger of the two channels
+            maxVals(i) = max([max(abs(L)), max(abs(R))]);
+        end
+    end
+
+    % ---- REPORT ----
+    [maxVal, idxMax] = max(maxVals);
+    fprintf('Max post-ampstim peak across all files: %.6f\n', maxVal);
+    fprintf('File with max value: %s\n', quadList{idxMax,5});
 
 %% ------------------------ GUI / HARDWARE SETUP -------------------------
 originalDir   = pwd;
@@ -206,10 +280,47 @@ for trialIdx = 1:howmany
 
     wavData = wavData(trimSamples+1 : end-trimSamples);   % TRIM
 
+    paddedMono = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
+    stereoBuffer=[paddedMono*playScaleLeft,paddedMono*playScaleRight];
 
-    if fsFile~=fsPlayback, error('File %s has sr %d, expected %d.',wavFile,fsFile,fsPlayback); end
-        paddedMono = [zeros(padSamples,1); wavData; zeros(padSamples,1)];
-        stereoBuffer=[paddedMono*playScaleLeft,paddedMono*playScaleRight];
+    if earIdx==1 %left ear
+        if audflag==1
+            [target rms_y db_y] = ampstim(paddedMono, fsPlayback, audiogram(1,:));
+
+        elseif audflag==0
+            target=paddedMono;
+        end
+        targetR=zeros(length(target),1);
+        targetL=target;
+    elseif earIdx==2    %right ear
+        if audflag==1
+            [target rms_y db_y] = ampstim(paddedMono, fsPlayback, audiogram(2,:));
+
+
+        elseif audflag==0
+            target=paddedMono;
+        end
+        targetL=zeros(length(target),1);
+        targetR=target;
+    elseif earIdx==3    %both ears
+        if audflag==1
+            [targetL rms_y db_y] = ampstim(paddedMono, fsPlayback, audiogram(1,:));
+            [targetR rms_y db_y] = ampstim(paddedMono, fsPlayback, audiogram(2,:));
+
+
+        elseif audflag==0
+            targetL=paddedMono;
+            targetR=paddedMono;
+        end
+    end
+
+    if max(abs(targetL*playScaleLeft))>1 | max(abs(targetR*playScaleRight))>1
+        disp('WARNING!!!  Wave file will exceed allowable values of +-1.  Please use audiogram with lower values!  ');
+    end
+    stereoBuffer=[targetL*playScaleLeft,targetR*playScaleRight];
+
+
+
 
 
     % --- Update GUI buttons for this trial ---------------------------------
